@@ -1,0 +1,39 @@
+{% extends 'employees/base.html' %}
+{% load group_tags %}
+
+{% block title %}Подразделения{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Подразделения</h1>
+    {% if user.is_superuser or user|has_group:"Администратор" %}
+        <a href="{% url 'department_create' %}" class="btn btn-primary">Добавить подразделение</a>
+    {% endif %}
+</div>
+<style>
+    .department-row-link { cursor: pointer; transition: background 0.15s; }
+    .department-row-link:hover, .department-row-link:focus { background: #e7f1ff; text-decoration: none; }
+</style>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Количество сотрудников</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for department in departments %}
+            <tr class="department-row-link" title="Показать сотрудников подразделения" onclick="window.location.href='{% url 'employees_by_department' department.id %}'">
+                <td>{{ department.name }}</td>
+                <td>{{ department.employee_set.count }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center">Подразделения не найдены</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

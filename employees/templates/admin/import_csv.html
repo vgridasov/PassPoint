@@ -1,0 +1,13 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="id_csv_file">CSV-файл (одна колонка — название):</label>
+        <input type="file" name="csv_file" id="id_csv_file" class="form-control" required>
+    </div>
+    <button type="submit" name="apply" class="btn btn-primary mt-3">Импортировать</button>
+    <a href="../" class="btn btn-secondary mt-3">Отмена</a>
+</form>
+{% endblock %} 

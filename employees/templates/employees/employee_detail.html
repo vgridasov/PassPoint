@@ -1,0 +1,63 @@
+{% extends 'employees/base.html' %}
+{% load group_tags %}
+
+{% block title %}{{ employee }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        {% if employee.photo %}
+            <img src="{{ employee.photo.url }}" alt="{{ employee }}" class="img-fluid rounded mb-3">
+        {% else %}
+            <div class="bg-light rounded p-5 text-center mb-3">
+                <span class="text-muted">Фото отсутствует</span>
+            </div>
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <h1>{{ employee }}</h1>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Основная информация</h5>
+                <dl class="row">
+                    <dt class="col-sm-3">Подразделение</dt>
+                    <dd class="col-sm-9">{{ employee.department }}</dd>
+
+                    <dt class="col-sm-3">Должность</dt>
+                    <dd class="col-sm-9">{{ employee.position }}</dd>
+
+                    <dt class="col-sm-3">Статус</dt>
+                    <dd class="col-sm-9">
+                        {% if employee.is_fired %}
+                            <span class="badge bg-danger">Уволен</span>
+                        {% else %}
+                            <span class="badge bg-success">Работает</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-3">Пропуск</dt>
+                    <dd class="col-sm-9">
+                        {% if employee.lost_pass %}
+                            <span class="badge bg-danger">Утерян</span>
+                        {% elif employee.has_pass %}
+                            <span class="badge bg-success">Выдан</span>
+                        {% else %}
+                            <span class="badge bg-warning">Не выдан</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            {% if user.is_superuser or user|has_group:"Администратор" %}
+                <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-warning">Редактировать</a>
+            {% endif %}
+            {% if view_mode == 'list' %}
+                <a href="{% url 'employee_list' %}?view=list" class="btn btn-secondary">Назад к списку</a>
+            {% else %}
+                <a href="{% url 'employee_list' %}?view=cards" class="btn btn-secondary">Назад к списку</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

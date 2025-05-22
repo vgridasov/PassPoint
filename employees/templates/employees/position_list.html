@@ -1,0 +1,39 @@
+{% extends 'employees/base.html' %}
+{% load group_tags %}
+
+{% block title %}Должности{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Должности</h1>
+    {% if user.is_superuser or user|has_group:"Администратор" %}
+        <a href="{% url 'position_create' %}" class="btn btn-primary">Добавить должность</a>
+    {% endif %}
+</div>
+<style>
+    .position-row-link { cursor: pointer; transition: background 0.15s; }
+    .position-row-link:hover, .position-row-link:focus { background: #e7f1ff; text-decoration: none; }
+</style>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Количество сотрудников</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for position in positions %}
+            <tr class="position-row-link" title="Показать сотрудников должности" onclick="window.location.href='{% url 'employees_by_position' position.id %}'">
+                <td>{{ position.name }}</td>
+                <td>{{ position.employee_set.count }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="2" class="text-center">Должности не найдены</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 
