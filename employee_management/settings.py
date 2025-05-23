@@ -59,9 +59,11 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'employee_management.context_processors.organization_settings',
             ],
         },
     },
@@ -131,3 +133,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/?logged_out=1'
+
+# Настройки организации
+ORGANIZATION_NAME = 'ОБУЗ "КОМКБ"'
+ORGANIZATION_ADDRESS = 'г. Курск, ул. Сумская, д. 45А'
+ORGANIZATION_PHONE = '+7 (471) 235-96-02'
+ORGANIZATION_EMAIL = 'support@komkb.ru'
