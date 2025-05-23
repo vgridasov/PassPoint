@@ -46,3 +46,5 @@ ENV/
 .env
 *.bak
 *.tmp 
+*.csv
+*.xls

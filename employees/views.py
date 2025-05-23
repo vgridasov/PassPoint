@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from .models import Employee, Department, Position
 from .forms import EmployeeForm, DepartmentForm, PositionForm
+from django.core.paginator import Paginator
 
 def is_admin(user):
     return user.is_superuser or user.groups.filter(name='Администратор').exists()
@@ -10,8 +11,11 @@ def is_admin(user):
 @login_required
 def employee_list(request):
     employees = Employee.objects.all().order_by('last_name', 'first_name')
+    paginator = Paginator(employees, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     view_mode = request.GET.get('view', 'cards')
-    return render(request, 'employees/employee_list.html', {'employees': employees, 'view_mode': view_mode})
+    return render(request, 'employees/employee_list.html', {'page_obj': page_obj, 'view_mode': view_mode})
 
 @login_required
 def employee_detail(request, pk):
@@ -47,7 +51,10 @@ def employee_edit(request, pk):
 @login_required
 def department_list(request):
     departments = Department.objects.all().order_by('name')
-    return render(request, 'employees/department_list.html', {'departments': departments})
+    paginator = Paginator(departments, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'employees/department_list.html', {'page_obj': page_obj})
 
 @user_passes_test(is_admin)
 def department_create(request):
@@ -64,7 +71,10 @@ def department_create(request):
 @login_required
 def position_list(request):
     positions = Position.objects.all().order_by('name')
-    return render(request, 'employees/position_list.html', {'positions': positions})
+    paginator = Paginator(positions, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'employees/position_list.html', {'page_obj': page_obj})
 
 @user_passes_test(is_admin)
 def position_create(request):
@@ -82,9 +92,12 @@ def position_create(request):
 def employees_by_department(request, department_id):
     department = get_object_or_404(Department, pk=department_id)
     employees = Employee.objects.filter(department=department).order_by('last_name', 'first_name')
+    paginator = Paginator(employees, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     view_mode = request.GET.get('view', 'cards')
     return render(request, 'employees/employee_list.html', {
-        'employees': employees,
+        'page_obj': page_obj,
         'view_mode': view_mode,
         'filter_title': f'Сотрудники подразделения: {department.name}',
     })
@@ -93,9 +106,12 @@ def employees_by_department(request, department_id):
 def employees_by_position(request, position_id):
     position = get_object_or_404(Position, pk=position_id)
     employees = Employee.objects.filter(position=position).order_by('last_name', 'first_name')
+    paginator = Paginator(employees, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     view_mode = request.GET.get('view', 'cards')
     return render(request, 'employees/employee_list.html', {
-        'employees': employees,
+        'page_obj': page_obj,
         'view_mode': view_mode,
         'filter_title': f'Сотрудники должности: {position.name}',
     })
