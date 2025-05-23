@@ -20,11 +20,25 @@ def employee_list(request):
             Q(first_name__iregex=search_query) |
             Q(middle_name__iregex=search_query)
         )
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/employee_list.html', {
+            'page_obj': employees,
+            'view_mode': request.GET.get('view', 'cards'),
+            'search_query': search_query,
+            'show_all': True
+        })
+    
     paginator = Paginator(employees, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    view_mode = request.GET.get('view', 'cards')
-    return render(request, 'employees/employee_list.html', {'page_obj': page_obj, 'view_mode': view_mode, 'search_query': search_query})
+    
+    return render(request, 'employees/employee_list.html', {
+        'page_obj': page_obj, 
+        'view_mode': request.GET.get('view', 'cards'),
+        'search_query': search_query
+    })
 
 @login_required
 def employee_detail(request, pk):
@@ -63,10 +77,23 @@ def department_list(request):
     search_query = request.GET.get('search', '')
     if search_query:
         departments = departments.filter(name__iregex=search_query)
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/department_list.html', {
+            'page_obj': departments,
+            'search_query': search_query,
+            'show_all': True
+        })
+    
     paginator = Paginator(departments, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    return render(request, 'employees/department_list.html', {'page_obj': page_obj, 'search_query': search_query})
+    
+    return render(request, 'employees/department_list.html', {
+        'page_obj': page_obj, 
+        'search_query': search_query
+    })
 
 @user_passes_test(is_admin)
 def department_create(request):
@@ -86,10 +113,23 @@ def position_list(request):
     search_query = request.GET.get('search', '')
     if search_query:
         positions = positions.filter(name__iregex=search_query)
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/position_list.html', {
+            'page_obj': positions,
+            'search_query': search_query,
+            'show_all': True
+        })
+    
     paginator = Paginator(positions, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    return render(request, 'employees/position_list.html', {'page_obj': page_obj, 'search_query': search_query})
+    
+    return render(request, 'employees/position_list.html', {
+        'page_obj': page_obj, 
+        'search_query': search_query
+    })
 
 @user_passes_test(is_admin)
 def position_create(request):

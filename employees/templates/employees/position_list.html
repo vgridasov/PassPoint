@@ -95,5 +95,10 @@
         {% endif %}
     </ul>
 </nav>
+<div class="text-center mt-2">
+    <a href="?show_all=1{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+        Показать все
+    </a>
+</div>
 {% endif %}
 {% endblock %} 
