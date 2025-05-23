@@ -29,7 +29,9 @@ media/
 static/
 
 # Virtual Environment
+.venv/
 venv/
+.env/
 env/
 ENV/
 
