@@ -6,13 +6,15 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Должности</h1>
-    <div>
+    <div class="d-flex align-items-center gap-2">
         <form method="get" class="d-flex">
             <input type="text" name="search" class="form-control me-2" placeholder="Поиск..." value="{{ search_query }}">
             <button type="submit" class="btn btn-outline-secondary">Найти</button>
         </form>
         {% if user.is_superuser or user|has_group:"Администратор" %}
-            <a href="{% url 'position_create' %}" class="btn btn-primary ms-2">Добавить должность</a>
+            <a href="{% url 'position_create' %}" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Добавить должность">
+                <i class="bi bi-plus-lg"></i>
+            </a>
         {% endif %}
     </div>
 </div>

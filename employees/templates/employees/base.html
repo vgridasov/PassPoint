@@ -41,9 +41,11 @@
                             <span class="nav-link">{{ user.username }}</span>
                         </li>
                         <li class="nav-item">
-                            <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                            <form method="post" action="{% url 'logout' %}" class="nav-link">
                                 {% csrf_token %}
-                                <button type="submit" class="nav-link btn btn-link">Выйти</button>
+                                <button type="submit" class="nav-link btn btn-link" title="Выйти">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                </button>
                             </form>
                         </li>
                     {% else %}
