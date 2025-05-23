@@ -4,6 +4,8 @@ from django.contrib import messages
 from .models import Employee, Department, Position
 from .forms import EmployeeForm, DepartmentForm, PositionForm
 from django.core.paginator import Paginator
+from django.db.models.functions import Lower
+from django.db.models import Q
 
 def is_admin(user):
     return user.is_superuser or user.groups.filter(name='Администратор').exists()
@@ -11,11 +13,18 @@ def is_admin(user):
 @login_required
 def employee_list(request):
     employees = Employee.objects.all().order_by('last_name', 'first_name')
+    search_query = request.GET.get('search', '')
+    if search_query:
+        employees = employees.filter(
+            Q(last_name__iregex=search_query) |
+            Q(first_name__iregex=search_query) |
+            Q(middle_name__iregex=search_query)
+        )
     paginator = Paginator(employees, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     view_mode = request.GET.get('view', 'cards')
-    return render(request, 'employees/employee_list.html', {'page_obj': page_obj, 'view_mode': view_mode})
+    return render(request, 'employees/employee_list.html', {'page_obj': page_obj, 'view_mode': view_mode, 'search_query': search_query})
 
 @login_required
 def employee_detail(request, pk):
@@ -51,10 +60,13 @@ def employee_edit(request, pk):
 @login_required
 def department_list(request):
     departments = Department.objects.all().order_by('name')
+    search_query = request.GET.get('search', '')
+    if search_query:
+        departments = departments.filter(name__iregex=search_query)
     paginator = Paginator(departments, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    return render(request, 'employees/department_list.html', {'page_obj': page_obj})
+    return render(request, 'employees/department_list.html', {'page_obj': page_obj, 'search_query': search_query})
 
 @user_passes_test(is_admin)
 def department_create(request):
@@ -71,10 +83,13 @@ def department_create(request):
 @login_required
 def position_list(request):
     positions = Position.objects.all().order_by('name')
+    search_query = request.GET.get('search', '')
+    if search_query:
+        positions = positions.filter(name__iregex=search_query)
     paginator = Paginator(positions, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    return render(request, 'employees/position_list.html', {'page_obj': page_obj})
+    return render(request, 'employees/position_list.html', {'page_obj': page_obj, 'search_query': search_query})
 
 @user_passes_test(is_admin)
 def position_create(request):

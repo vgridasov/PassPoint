@@ -48,3 +48,10 @@ ENV/
 *.tmp 
 *.csv
 *.xls
+*.xlsx
+*.xlsm
+*.xlsb
+*.xltx
+*.xltm
+*.xlt
+*.xlw
