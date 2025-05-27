@@ -1,14 +1,27 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
 from .models import Employee, Department, Position
+from .resources import EmployeeResource, DepartmentResource, PositionResource
 from django.urls import path
 from django.shortcuts import render, redirect
 from django.contrib import messages
 import csv
 from io import TextIOWrapper
 
-class DepartmentAdmin(admin.ModelAdmin):
+@admin.register(Employee)
+class EmployeeAdmin(ImportExportModelAdmin):
+    resource_class = EmployeeResource
+    list_display = ('last_name', 'first_name', 'middle_name', 'department', 'position')
+    list_filter = ('department', 'position')
+    search_fields = ('last_name', 'first_name', 'middle_name')
+    change_list_template = 'admin/import_export/change_list_import_export.html'
+
+@admin.register(Department)
+class DepartmentAdmin(ImportExportModelAdmin):
+    resource_class = DepartmentResource
     list_display = ('name', 'full_name')
     change_list_template = 'admin/department_changelist.html'
+    search_fields = ('name',)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -36,9 +49,12 @@ class DepartmentAdmin(admin.ModelAdmin):
             'opts': self.model._meta,
         })
 
-class PositionAdmin(admin.ModelAdmin):
+@admin.register(Position)
+class PositionAdmin(ImportExportModelAdmin):
+    resource_class = PositionResource
     list_display = ('name', 'full_name')
     change_list_template = 'admin/position_changelist.html'
+    search_fields = ('name',)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -65,7 +81,3 @@ class PositionAdmin(admin.ModelAdmin):
             'title': 'Загрузить должности из CSV',
             'opts': self.model._meta,
         })
-
-admin.site.register(Department, DepartmentAdmin)
-admin.site.register(Position, PositionAdmin)
-admin.site.register(Employee)
