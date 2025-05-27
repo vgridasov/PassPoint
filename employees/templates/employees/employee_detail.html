@@ -6,6 +6,14 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
         {% if employee.photo %}
             <img src="{{ employee.photo.url }}" alt="{{ employee }}" class="img-fluid rounded mb-3">
         {% else %}
@@ -48,6 +56,32 @@
                 </dl>
             </div>
         </div>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Пропуск</h5>
+                {% if not employee.pass_svg %}
+                    {% if user.is_superuser or user|has_group:"Администратор" %}
+                        <button type="button" class="btn btn-primary btn-sm" onclick="createPass()">
+                            Создать пропуск
+                        </button>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if employee.pass_svg %}
+                    <div class="text-center">
+                        <a href="{{ employee.pass_svg.url }}" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Просмотреть пропуск
+                        </a>
+                        <button onclick="window.open('{{ employee.pass_svg.url }}', '_blank').print()" class="btn btn-outline-secondary">
+                            <i class="bi bi-printer"></i> Печать
+                        </button>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Пропуск не создан</p>
+                {% endif %}
+            </div>
+        </div>
         <div class="d-flex gap-2">
             {% if user.is_superuser or user|has_group:"Администратор" %}
                 <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-warning">Редактировать</a>
@@ -60,4 +94,88 @@
         </div>
     </div>
 </div>
+
+<script>
+function createPass() {
+    if (!confirm('Создать пропуск?')) return;
+    
+    fetch('{% url "create_pass" employee.pk %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else if (data.need_template) {
+            // Показываем модальное окно для загрузки шаблона
+            const modal = new bootstrap.Modal(document.getElementById('importTemplateModal'));
+            modal.show();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        alert('Произошла ошибка при создании пропуска');
+        console.error('Error:', error);
+    });
+}
+</script>
+
+<!-- Модальное окно для импорта шаблона пропуска -->
+<div class="modal fade" id="importTemplateModal" tabindex="-1" aria-labelledby="importTemplateModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="importTemplateForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="importTemplateModalLabel">Импорт шаблона пропуска</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="templateFile" class="form-label">Выберите SVG-файл шаблона</label>
+            <input class="form-control" type="file" id="templateFile" name="templateFile" accept=".svg" required>
+          </div>
+          <div class="alert alert-info">Шаблон должен быть в формате SVG с плейсхолдерами в фигурных скобках.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-primary">Импортировать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Обработка импорта шаблона пропуска
+$('#importTemplateForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    fetch('{% url "import_pass_template" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Шаблон успешно импортирован! Теперь можно создать пропуск.');
+            location.reload();
+        } else {
+            alert(data.message || 'Ошибка при импорте шаблона');
+        }
+    })
+    .catch(error => {
+        alert('Ошибка при загрузке шаблона');
+        console.error('Error:', error);
+    });
+});
+</script>
 {% endblock %} 

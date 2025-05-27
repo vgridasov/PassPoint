@@ -33,6 +33,7 @@ class Employee(models.Model):
     is_fired = models.BooleanField(default=False, verbose_name='Уволен')
     has_pass = models.BooleanField(default=False, verbose_name='Выдан пропуск')
     lost_pass = models.BooleanField(default=False, verbose_name='Утерян пропуск')
+    pass_svg = models.FileField(upload_to='pass_result/', null=True, blank=True, verbose_name='Пропуск')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
