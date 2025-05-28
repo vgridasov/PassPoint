@@ -1,0 +1,158 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Панель администратора') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
+<style>
+    :root {
+        --primary: #2c3e50;
+        --secondary: #34495e;
+        --accent: #3498db;
+        --primary-fg: #fff;
+        --body-fg: #333;
+        --body-bg: #f8f9fa;
+        --header-color: #fff;
+        --header-bg: var(--primary);
+        --header-link-color: #fff;
+        --breadcrumbs-bg: var(--secondary);
+        --breadcrumbs-fg: #fff;
+        --link-fg: var(--accent);
+        --link-hover-color: #2980b9;
+        --button-fg: #fff;
+        --button-bg: var(--accent);
+        --button-hover-bg: #2980b9;
+        --default-button-bg: var(--accent);
+        --default-button-hover-bg: #2980b9;
+        --close-button-bg: var(--accent);
+        --close-button-hover-bg: #2980b9;
+        --delete-button-bg: #e74c3c;
+        --delete-button-hover-bg: #c0392b;
+    }
+
+    body {
+        background: var(--body-bg);
+        color: var(--body-fg);
+    }
+
+    #header {
+        background: var(--header-bg) !important;
+        color: var(--header-color) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    #branding h1 {
+        font-weight: 600;
+    }
+
+    .module h2, .module caption {
+        background: var(--secondary) !important;
+        color: var(--primary-fg) !important;
+        font-weight: 600;
+    }
+
+    .button, input[type=submit], input[type=button], .submit-row input {
+        background: var(--button-bg) !important;
+        color: var(--button-fg) !important;
+        border-radius: 4px;
+        transition: background 0.3s ease;
+    }
+
+    .button:hover, input[type=submit]:hover, input[type=button]:hover {
+        background: var(--button-hover-bg) !important;
+    }
+
+    .button.default {
+        background: var(--default-button-bg) !important;
+    }
+
+    .button.default:hover {
+        background: var(--default-button-hover-bg) !important;
+    }
+
+    .button.delete {
+        background: var(--delete-button-bg) !important;
+    }
+
+    .button.delete:hover {
+        background: var(--delete-button-hover-bg) !important;
+    }
+
+    #changelist-filter h2 {
+        background: var(--secondary) !important;
+        color: var(--primary-fg) !important;
+        border-radius: 4px 4px 0 0;
+    }
+
+    #changelist-filter li.selected a {
+        color: var(--accent) !important;
+    }
+
+    .paginator a:link, .paginator a:visited {
+        background: var(--accent) !important;
+        color: var(--button-fg) !important;
+        border-radius: 4px;
+    }
+
+    .paginator a:hover {
+        background: var(--button-hover-bg) !important;
+    }
+
+    .row1 {
+        background: #fff;
+    }
+
+    .row2 {
+        background: #f8f9fa;
+    }
+
+    #content {
+        padding: 20px;
+    }
+
+    .object-tools a:link, .object-tools a:visited {
+        background: var(--accent) !important;
+        color: var(--button-fg) !important;
+        border-radius: 4px;
+    }
+
+    .object-tools a:hover {
+        background: var(--button-hover-bg) !important;
+    }
+
+    /* Переопределение стандартных стилей Django */
+    #header a:link, #header a:visited {
+        color: var(--header-link-color) !important;
+    }
+
+    .module {
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .submit-row {
+        background: var(--body-bg) !important;
+        border-radius: 0 0 4px 4px;
+    }
+
+    .submit-row input {
+        margin-left: 8px;
+    }
+
+    .submit-row input:first-child {
+        margin-left: 0;
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        Панель администратора
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %} 
