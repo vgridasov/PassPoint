@@ -110,7 +110,7 @@
                             </button>
                         </div>
                         
-                        <div class="photo-tip">
+                        <div class="photo-tip" id="photoTip">
                             <i class="fas fa-info-circle"></i> Расположите лицо в центре рамки для лучшего результата
                         </div>
                         
@@ -120,6 +120,7 @@
                         
                         {{ form.photo }}
                         <input type="hidden" name="webcam_photo" id="webcam_photo">
+                        <input type="hidden" name="file_photo_cropped" id="file_photo_cropped">
                     </div>
                 </div>
                 <div class="mb-3">
@@ -185,6 +186,8 @@ $(document).ready(function() {
     const capturedPhoto = $('#captured-photo');
     const photoControls = $('.photo-controls');
     const webcamPhotoInput = $('#webcam_photo');
+    const filePhotoInput = $('#id_photo');
+    const filePhotoCroppedInput = $('#file_photo_cropped');
     
     function showWebcamUI() {
         $('#startWebcam').hide();
@@ -226,6 +229,7 @@ $(document).ready(function() {
                 $('#id_photo').val('');
                 capturedPhoto.hide();
                 $('#webcamError').hide();
+                $('#photoTip').show();
             })
             .catch(function(error) {
                 console.error("Ошибка доступа к камере:", error);
@@ -303,6 +307,58 @@ $(document).ready(function() {
 
     // При загрузке страницы
     resetPhotoUI();
+
+    // Предпросмотр и кадрирование файла
+    filePhotoInput.on('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const img = new Image();
+            img.onload = function() {
+                // Кадрируем до 3:4 по центру
+                const imgW = img.width;
+                const imgH = img.height;
+                const cropAspect = 3 / 4;
+                let cropW, cropH, cropX, cropY;
+                if (imgW / imgH > cropAspect) {
+                    cropH = imgH;
+                    cropW = cropH * cropAspect;
+                    cropX = (imgW - cropW) / 2;
+                    cropY = 0;
+                } else {
+                    cropW = imgW;
+                    cropH = cropW / cropAspect;
+                    cropX = 0;
+                    cropY = (imgH - cropH) / 2;
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = 300;
+                canvas.height = 400;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+                const imageData = canvas.toDataURL('image/jpeg');
+                $('#captured-photo').attr('src', imageData).show();
+                filePhotoCroppedInput.val(imageData);
+
+                // UI: показать предпросмотр, скрыть retake, показать кнопки выбора
+                showPreviewUI();
+                $('#retakePhoto').hide();
+                $('#photoTip').hide();
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // При отправке формы, если есть кадрированный файл, очищаем file input
+    $('form').on('submit', function() {
+        if (filePhotoCroppedInput.val()) {
+            filePhotoInput.val('');
+        }
+    });
 });
 </script>
 {% endblock %} 

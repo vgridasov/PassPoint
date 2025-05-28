@@ -78,26 +78,35 @@ def employee_create(request):
         form = EmployeeForm(request.POST, request.FILES)
         if form.is_valid():
             employee = form.save(commit=False)
-            
-            # Обработка фото с веб-камеры
-            webcam_photo = request.POST.get('webcam_photo')
-            if webcam_photo and not request.FILES.get('photo'):
+
+            # Обработка кадрированного фото из файла
+            file_photo_cropped = request.POST.get('file_photo_cropped')
+            if file_photo_cropped:
                 try:
-                    # Удаляем префикс data:image/jpeg;base64,
-                    format, imgstr = webcam_photo.split(';base64,')
+                    format, imgstr = file_photo_cropped.split(';base64,')
                     ext = format.split('/')[-1]
-                    
-                    # Генерируем уникальное имя файла
                     filename = f"{uuid.uuid4()}.{ext}"
-                    
-                    # Декодируем base64 и сохраняем файл
                     data = ContentFile(base64.b64decode(imgstr))
                     employee.photo.save(filename, data, save=True)
                 except Exception as e:
-                    logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                    logger.error(f"Ошибка при сохранении кадрированного фото из файла: {str(e)}")
                     messages.error(request, 'Ошибка при сохранении фото')
                     return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Добавить сотрудника'})
-            
+            else:
+                # Обработка фото с веб-камеры
+                webcam_photo = request.POST.get('webcam_photo')
+                if webcam_photo and not request.FILES.get('photo'):
+                    try:
+                        format, imgstr = webcam_photo.split(';base64,')
+                        ext = format.split('/')[-1]
+                        filename = f"{uuid.uuid4()}.{ext}"
+                        data = ContentFile(base64.b64decode(imgstr))
+                        employee.photo.save(filename, data, save=True)
+                    except Exception as e:
+                        logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                        messages.error(request, 'Ошибка при сохранении фото')
+                        return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Добавить сотрудника'})
+
             employee.save()
             messages.success(request, 'Сотрудник успешно добавлен')
             return redirect('employee_list')
@@ -111,25 +120,34 @@ def employee_edit(request, pk):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
-            # Обработка фото с веб-камеры
-            webcam_photo = request.POST.get('webcam_photo')
-            if webcam_photo and not request.FILES.get('photo'):
+            # Обработка кадрированного фото из файла
+            file_photo_cropped = request.POST.get('file_photo_cropped')
+            if file_photo_cropped:
                 try:
-                    # Удаляем префикс data:image/jpeg;base64,
-                    format, imgstr = webcam_photo.split(';base64,')
+                    format, imgstr = file_photo_cropped.split(';base64,')
                     ext = format.split('/')[-1]
-                    
-                    # Генерируем уникальное имя файла
                     filename = f"{uuid.uuid4()}.{ext}"
-                    
-                    # Декодируем base64 и сохраняем файл
                     data = ContentFile(base64.b64decode(imgstr))
                     employee.photo.save(filename, data, save=True)
                 except Exception as e:
-                    logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                    logger.error(f"Ошибка при сохранении кадрированного фото из файла: {str(e)}")
                     messages.error(request, 'Ошибка при сохранении фото')
                     return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
-            
+            else:
+                # Обработка фото с веб-камеры
+                webcam_photo = request.POST.get('webcam_photo')
+                if webcam_photo and not request.FILES.get('photo'):
+                    try:
+                        format, imgstr = webcam_photo.split(';base64,')
+                        ext = format.split('/')[-1]
+                        filename = f"{uuid.uuid4()}.{ext}"
+                        data = ContentFile(base64.b64decode(imgstr))
+                        employee.photo.save(filename, data, save=True)
+                    except Exception as e:
+                        logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                        messages.error(request, 'Ошибка при сохранении фото')
+                        return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
+
             form.save()
             messages.success(request, 'Данные сотрудника обновлены')
             return redirect('employee_list')
