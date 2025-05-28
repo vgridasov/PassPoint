@@ -55,3 +55,9 @@ ENV/
 *.xltm
 *.xlt
 *.xlw
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+*.pyc

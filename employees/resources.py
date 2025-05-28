@@ -23,7 +23,10 @@ class EmployeeResource(resources.ModelResource):
                 except Department.DoesNotExist:
                     raise Exception(f"Строка {row_number or ''}: подразделение с id={dep_val} не найдено")
             else:
-                dep, _ = Department.objects.get_or_create(name=dep_val, defaults={'full_name': dep_val})
+                dep, _ = Department.objects.get_or_create(
+                    name=dep_val,
+                    defaults={'full_name': dep_val}
+                )
             row['department'] = dep.pk
         # Должность
         pos_val = row.get('position') or row.get('position__name')
@@ -35,7 +38,10 @@ class EmployeeResource(resources.ModelResource):
                 except Position.DoesNotExist:
                     raise Exception(f"Строка {row_number or ''}: должность с id={pos_val} не найдена")
             else:
-                pos, _ = Position.objects.get_or_create(name=pos_val, defaults={'full_name': pos_val})
+                pos, _ = Position.objects.get_or_create(
+                    name=pos_val,
+                    defaults={'full_name': pos_val}
+                )
             row['position'] = pos.pk
         # Фото
         photo_path = row.get('photo')
@@ -61,7 +67,7 @@ class DepartmentResource(resources.ModelResource):
         export_order = ('id', 'name', 'full_name')
 
     def before_import_row(self, row, **kwargs):
-        if not row.get('full_name') and row.get('name'):
+        if row.get('name'):
             row['full_name'] = row['name']
 
 class PositionResource(resources.ModelResource):
@@ -71,5 +77,5 @@ class PositionResource(resources.ModelResource):
         export_order = ('id', 'name', 'full_name')
 
     def before_import_row(self, row, **kwargs):
-        if not row.get('full_name') and row.get('name'):
+        if row.get('name'):
             row['full_name'] = row['name'] 

@@ -7,6 +7,9 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 import csv
 from io import TextIOWrapper
+import logging
+
+logger = logging.getLogger(__name__)
 
 @admin.register(Employee)
 class EmployeeAdmin(ImportExportModelAdmin):
@@ -33,16 +36,27 @@ class DepartmentAdmin(ImportExportModelAdmin):
     def import_csv(self, request):
         if request.method == 'POST' and request.FILES.get('csv_file'):
             csv_file = request.FILES['csv_file']
-            decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
-            reader = csv.reader(decoded_file)
-            count = 0
-            for row in reader:
-                full_name = row[0].strip()
-                if full_name:
-                    name = full_name[:32]
-                    Department.objects.get_or_create(name=name, defaults={'full_name': full_name})
-                    count += 1
-            self.message_user(request, f'Импортировано подразделений: {count}', messages.SUCCESS)
+            if not csv_file.name.endswith('.csv'):
+                self.message_user(request, 'Файл должен быть в формате CSV', messages.ERROR)
+                return redirect('..')
+            
+            try:
+                decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
+                reader = csv.reader(decoded_file)
+                count = 0
+                for row in reader:
+                    full_name = row[0].strip()
+                    if full_name:
+                        Department.objects.get_or_create(
+                            name=full_name,
+                            defaults={'full_name': full_name}
+                        )
+                        count += 1
+                logger.info(f"Импортировано подразделений: {count}")
+                self.message_user(request, f'Импортировано подразделений: {count}', messages.SUCCESS)
+            except Exception as e:
+                logger.error(f"Ошибка при импорте подразделений: {str(e)}")
+                self.message_user(request, f'Ошибка при импорте: {str(e)}', messages.ERROR)
             return redirect('..')
         return render(request, 'admin/import_csv.html', {
             'title': 'Загрузить подразделения из CSV',
@@ -66,16 +80,27 @@ class PositionAdmin(ImportExportModelAdmin):
     def import_csv(self, request):
         if request.method == 'POST' and request.FILES.get('csv_file'):
             csv_file = request.FILES['csv_file']
-            decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
-            reader = csv.reader(decoded_file)
-            count = 0
-            for row in reader:
-                full_name = row[0].strip()
-                if full_name:
-                    name = full_name[:32]
-                    Position.objects.get_or_create(name=name, defaults={'full_name': full_name})
-                    count += 1
-            self.message_user(request, f'Импортировано должностей: {count}', messages.SUCCESS)
+            if not csv_file.name.endswith('.csv'):
+                self.message_user(request, 'Файл должен быть в формате CSV', messages.ERROR)
+                return redirect('..')
+            
+            try:
+                decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
+                reader = csv.reader(decoded_file)
+                count = 0
+                for row in reader:
+                    full_name = row[0].strip()
+                    if full_name:
+                        Position.objects.get_or_create(
+                            name=full_name,
+                            defaults={'full_name': full_name}
+                        )
+                        count += 1
+                logger.info(f"Импортировано должностей: {count}")
+                self.message_user(request, f'Импортировано должностей: {count}', messages.SUCCESS)
+            except Exception as e:
+                logger.error(f"Ошибка при импорте должностей: {str(e)}")
+                self.message_user(request, f'Ошибка при импорте: {str(e)}', messages.ERROR)
             return redirect('..')
         return render(request, 'admin/import_csv.html', {
             'title': 'Загрузить должности из CSV',
