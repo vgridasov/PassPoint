@@ -19,6 +19,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
+from django.core.files.base import ContentFile
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +77,28 @@ def employee_create(request):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            employee = form.save(commit=False)
+            
+            # Обработка фото с веб-камеры
+            webcam_photo = request.POST.get('webcam_photo')
+            if webcam_photo and not request.FILES.get('photo'):
+                try:
+                    # Удаляем префикс data:image/jpeg;base64,
+                    format, imgstr = webcam_photo.split(';base64,')
+                    ext = format.split('/')[-1]
+                    
+                    # Генерируем уникальное имя файла
+                    filename = f"{uuid.uuid4()}.{ext}"
+                    
+                    # Декодируем base64 и сохраняем файл
+                    data = ContentFile(base64.b64decode(imgstr))
+                    employee.photo.save(filename, data, save=True)
+                except Exception as e:
+                    logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                    messages.error(request, 'Ошибка при сохранении фото')
+                    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Добавить сотрудника'})
+            
+            employee.save()
             messages.success(request, 'Сотрудник успешно добавлен')
             return redirect('employee_list')
     else:
@@ -88,6 +111,25 @@ def employee_edit(request, pk):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
+            # Обработка фото с веб-камеры
+            webcam_photo = request.POST.get('webcam_photo')
+            if webcam_photo and not request.FILES.get('photo'):
+                try:
+                    # Удаляем префикс data:image/jpeg;base64,
+                    format, imgstr = webcam_photo.split(';base64,')
+                    ext = format.split('/')[-1]
+                    
+                    # Генерируем уникальное имя файла
+                    filename = f"{uuid.uuid4()}.{ext}"
+                    
+                    # Декодируем base64 и сохраняем файл
+                    data = ContentFile(base64.b64decode(imgstr))
+                    employee.photo.save(filename, data, save=True)
+                except Exception as e:
+                    logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                    messages.error(request, 'Ошибка при сохранении фото')
+                    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
+            
             form.save()
             messages.success(request, 'Данные сотрудника обновлены')
             return redirect('employee_list')

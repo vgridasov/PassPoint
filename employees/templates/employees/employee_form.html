@@ -6,6 +6,51 @@
 {% block extra_css %}
 <link href="{% static 'employees/css/select2.min.css' %}" rel="stylesheet" />
 <link href="{% static 'employees/css/select2-bootstrap-5-theme.min.css' %}" rel="stylesheet" />
+<style>
+    #webcam-container {
+        position: relative;
+        width: 300px;
+        height: 400px;
+        margin-bottom: 1rem;
+        background: #000;
+    }
+    #webcam {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    #crop-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 75%;
+        height: 100%;
+        border: 2px dashed #fff;
+        pointer-events: none;
+    }
+    .photo-controls {
+        margin-top: 1rem;
+    }
+    #captured-photo {
+        width: 300px;
+        height: 400px;
+        object-fit: cover;
+        display: none;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .photo-tip {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    .webcam-error {
+        color: #dc3545;
+        margin-top: 0.5rem;
+        display: none;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -38,8 +83,44 @@
             </div>
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
-                    {{ form.photo }}
+                    <label class="form-label">Фото</label>
+                    <div class="d-flex flex-column">
+                        <div class="btn-group mb-2" role="group">
+                            <button type="button" class="btn btn-outline-primary" id="startWebcam">
+                                <i class="fas fa-camera"></i> Сделать фото
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="uploadPhoto">
+                                <i class="fas fa-upload"></i> Загрузить файл
+                            </button>
+                        </div>
+                        
+                        <div id="webcam-container" style="display: none;">
+                            <video id="webcam" autoplay playsinline></video>
+                            <div id="crop-overlay"></div>
+                        </div>
+                        
+                        <img id="captured-photo" class="mb-2" alt="Сделанное фото">
+                        
+                        <div class="photo-controls" style="display: none;">
+                            <button type="button" class="btn btn-success mb-2" id="capturePhoto">
+                                <i class="fas fa-camera"></i> Сделать снимок
+                            </button>
+                            <button type="button" class="btn btn-danger" id="retakePhoto" style="display:none;">
+                                <i class="fas fa-redo"></i> Сделать заново
+                            </button>
+                        </div>
+                        
+                        <div class="photo-tip">
+                            <i class="fas fa-info-circle"></i> Расположите лицо в центре рамки для лучшего результата
+                        </div>
+                        
+                        <div class="webcam-error" id="webcamError">
+                            <i class="fas fa-exclamation-triangle"></i> <span></span>
+                        </div>
+                        
+                        {{ form.photo }}
+                        <input type="hidden" name="webcam_photo" id="webcam_photo">
+                    </div>
                 </div>
                 <div class="mb-3">
                     <div class="form-check">
@@ -94,6 +175,134 @@ $(document).ready(function() {
             }
         }
     });
+
+    // Скрываем стандартный input для загрузки файла
+    $('#id_photo').hide();
+    
+    let stream = null;
+    const webcamContainer = $('#webcam-container');
+    const webcam = $('#webcam')[0];
+    const capturedPhoto = $('#captured-photo');
+    const photoControls = $('.photo-controls');
+    const webcamPhotoInput = $('#webcam_photo');
+    
+    function showWebcamUI() {
+        $('#startWebcam').hide();
+        $('#uploadPhoto').hide();
+        $('.photo-controls').show();
+        $('#capturePhoto').show();
+        $('#retakePhoto').hide();
+    }
+    function showPreviewUI() {
+        $('#startWebcam').show();
+        $('#uploadPhoto').show();
+        $('.photo-controls').show();
+        $('#capturePhoto').hide();
+        $('#retakePhoto').show();
+    }
+    function resetPhotoUI() {
+        $('#startWebcam').show();
+        $('#uploadPhoto').show();
+        $('.photo-controls').hide();
+        $('#captured-photo').hide();
+        $('#retakePhoto').hide();
+        $('#capturePhoto').show();
+    }
+
+    $('#startWebcam').click(function() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: "user"
+                } 
+            })
+            .then(function(mediaStream) {
+                stream = mediaStream;
+                webcam.srcObject = mediaStream;
+                webcamContainer.show();
+                showWebcamUI();
+                $('#id_photo').val('');
+                capturedPhoto.hide();
+                $('#webcamError').hide();
+            })
+            .catch(function(error) {
+                console.error("Ошибка доступа к камере:", error);
+                $('#webcamError span').text("Не удалось получить доступ к камере: " + error.message);
+                $('#webcamError').show();
+            });
+        } else {
+            $('#webcamError span').text("Ваш браузер не поддерживает доступ к камере");
+            $('#webcamError').show();
+        }
+    });
+    
+    $('#uploadPhoto').click(function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            webcamContainer.hide();
+            resetPhotoUI();
+        }
+        $('#id_photo').click();
+    });
+    
+    $('#capturePhoto').click(function() {
+        const video = webcam;
+        const videoW = video.videoWidth;
+        const videoH = video.videoHeight;
+        const cropAspect = 3 / 4;
+
+        // Определяем размеры crop-области
+        let cropW, cropH, cropX, cropY;
+        if (videoW / videoH > cropAspect) {
+            // Видео шире, чем 3:4 — crop по ширине
+            cropH = videoH;
+            cropW = cropH * cropAspect;
+            cropX = (videoW - cropW) / 2;
+            cropY = 0;
+        } else {
+            // Видео уже, crop по высоте
+            cropW = videoW;
+            cropH = cropW / cropAspect;
+            cropX = 0;
+            cropY = (videoH - cropH) / 2;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 300;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        // Рисуем crop-область в canvas без искажений
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+        const imageData = canvas.toDataURL('image/jpeg');
+        capturedPhoto.attr('src', imageData);
+        webcamPhotoInput.val(imageData);
+        stream.getTracks().forEach(track => track.stop());
+        webcamContainer.hide();
+        showPreviewUI();
+        capturedPhoto.show();
+    });
+    
+    $('#retakePhoto').click(function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        webcamPhotoInput.val('');
+        capturedPhoto.hide();
+        $('#startWebcam').click();
+    });
+    
+    // Очистка при уходе со страницы
+    $(window).on('beforeunload', function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+
+    // При загрузке страницы
+    resetPhotoUI();
 });
 </script>
 {% endblock %} 
