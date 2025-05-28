@@ -91,9 +91,7 @@
                     <th>ФИО</th>
                     <th>Подразделение</th>
                     <th>Должность</th>
-                    <th>Уволен</th>
-                    <th>Выдан пропуск</th>
-                    <th>Утерян пропуск</th>
+                    <th>Статус</th>
                 </tr>
             </thead>
             <tbody>
@@ -103,30 +101,21 @@
                     <td>{{ employee.department }}</td>
                     <td>{{ employee.position }}</td>
                     <td>
-                        {% if employee.is_fired %}
-                            <span class="badge bg-danger">Да</span>
-                        {% else %}
-                            <span class="badge bg-success">Нет</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if employee.has_pass %}
-                            <span class="badge bg-success">Да</span>
-                        {% else %}
-                            <span class="badge bg-warning">Нет</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if employee.lost_pass %}
-                            <span class="badge bg-danger">Да</span>
-                        {% else %}
-                            <span class="badge bg-success">Нет</span>
-                        {% endif %}
+                        <div class="d-flex flex-wrap gap-1">
+                            {% if employee.is_fired %}
+                                <span class="badge bg-danger" title="Уволен">Уволен</span>
+                            {% endif %}
+                            {% if employee.lost_pass %}
+                                <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
+                            {% elif not employee.has_pass %}
+                                <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center">Сотрудники не найдены</td>
+                    <td colspan="4" class="text-center">Сотрудники не найдены</td>
                 </tr>
                 {% endfor %}
             </tbody>
