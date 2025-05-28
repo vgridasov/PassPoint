@@ -19,6 +19,10 @@ class EmployeeAdmin(ImportExportModelAdmin):
     search_fields = ('last_name', 'first_name', 'middle_name')
     change_list_template = 'admin/import_export/change_list_import_export.html'
 
+    def import_action(self, request, *args, **kwargs):
+        logger.info(f"Начало импорта сотрудников. Пользователь: {request.user}")
+        return super().import_action(request, *args, **kwargs)
+
 @admin.register(Department)
 class DepartmentAdmin(ImportExportModelAdmin):
     resource_class = DepartmentResource
@@ -37,20 +41,26 @@ class DepartmentAdmin(ImportExportModelAdmin):
         if request.method == 'POST' and request.FILES.get('csv_file'):
             csv_file = request.FILES['csv_file']
             if not csv_file.name.endswith('.csv'):
+                logger.warning(f"Попытка импорта неверного формата: {csv_file.name}")
                 self.message_user(request, 'Файл должен быть в формате CSV', messages.ERROR)
                 return redirect('..')
             
             try:
+                logger.info(f"Начало импорта подразделений из файла: {csv_file.name}")
                 decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
                 reader = csv.reader(decoded_file)
                 count = 0
                 for row in reader:
                     full_name = row[0].strip()
                     if full_name:
-                        Department.objects.get_or_create(
+                        dept, created = Department.objects.get_or_create(
                             name=full_name,
                             defaults={'full_name': full_name}
                         )
+                        if created:
+                            logger.info(f"Создано новое подразделение: {dept}")
+                        else:
+                            logger.info(f"Использовано существующее подразделение: {dept}")
                         count += 1
                 logger.info(f"Импортировано подразделений: {count}")
                 self.message_user(request, f'Импортировано подразделений: {count}', messages.SUCCESS)
@@ -81,20 +91,26 @@ class PositionAdmin(ImportExportModelAdmin):
         if request.method == 'POST' and request.FILES.get('csv_file'):
             csv_file = request.FILES['csv_file']
             if not csv_file.name.endswith('.csv'):
+                logger.warning(f"Попытка импорта неверного формата: {csv_file.name}")
                 self.message_user(request, 'Файл должен быть в формате CSV', messages.ERROR)
                 return redirect('..')
             
             try:
+                logger.info(f"Начало импорта должностей из файла: {csv_file.name}")
                 decoded_file = TextIOWrapper(csv_file, encoding='utf-8')
                 reader = csv.reader(decoded_file)
                 count = 0
                 for row in reader:
                     full_name = row[0].strip()
                     if full_name:
-                        Position.objects.get_or_create(
+                        pos, created = Position.objects.get_or_create(
                             name=full_name,
                             defaults={'full_name': full_name}
                         )
+                        if created:
+                            logger.info(f"Создана новая должность: {pos}")
+                        else:
+                            logger.info(f"Использована существующая должность: {pos}")
                         count += 1
                 logger.info(f"Импортировано должностей: {count}")
                 self.message_user(request, f'Импортировано должностей: {count}', messages.SUCCESS)

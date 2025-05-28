@@ -1,3 +1,9 @@
+import logging
+logger = logging.getLogger(__name__)
+
+# Тестовый лог при импорте модуля
+logger.info("Модуль employees.views загружен")
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -13,7 +19,6 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +27,11 @@ def is_admin(user):
 
 @login_required
 def employee_list(request):
+    logger.info(f"Запрос списка сотрудников. Пользователь: {request.user}")
     employees = Employee.objects.all().order_by('last_name', 'first_name')
     search_query = request.GET.get('search', '')
     if search_query:
+        logger.info(f"Поиск сотрудников по запросу: {search_query}")
         employees = employees.filter(
             Q(last_name__iregex=search_query) |
             Q(first_name__iregex=search_query) |

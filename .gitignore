@@ -49,12 +49,6 @@ ENV/
 *.csv
 *.xls
 *.xlsx
-*.xlsm
-*.xlsb
-*.xltx
-*.xltm
-*.xlt
-*.xlw
 
 # Test coverage
 .coverage
