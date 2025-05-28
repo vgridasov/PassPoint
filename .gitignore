@@ -41,6 +41,8 @@ ENV/
 *.swp
 *.swo
 .DS_Store
+.cursor/
+
 
 # Project specific
 .env
@@ -55,3 +57,6 @@ ENV/
 htmlcov/
 .pytest_cache/
 *.pyc
+.cursor/rules/frontend.mdc
+employees/PassPoint.code-workspace
+.cursor/rules/frontend.mdc

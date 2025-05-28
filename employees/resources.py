@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 class EmployeeResource(resources.ModelResource):
     class Meta:
         model = Employee
-        fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg')
-        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg')
+        fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
+        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
 
     def before_import_row(self, row, row_number=None, **kwargs):
         logger.info(f"Импорт строки {row_number}: {row}")
