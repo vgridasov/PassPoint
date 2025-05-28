@@ -49,7 +49,7 @@ def employee_list(request):
             'show_all': True
         })
     
-    paginator = Paginator(employees, 10)
+    paginator = Paginator(employees, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -70,7 +70,12 @@ def employee_detail(request, pk):
         messages.warning(request, 'Файл пропуска не найден. Пожалуйста, создайте пропуск заново.')
     
     view_mode = request.GET.get('view', 'cards')
-    return render(request, 'employees/employee_detail.html', {'employee': employee, 'view_mode': view_mode})
+    page = request.GET.get('page', '1')
+    return render(request, 'employees/employee_detail.html', {
+        'employee': employee, 
+        'view_mode': view_mode,
+        'page': page
+    })
 
 @user_passes_test(is_admin)
 def employee_create(request):

@@ -42,7 +42,7 @@
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {% for employee in page_obj %}
             <div class="col">
-                <a href="{% url 'employee_detail' employee.pk %}?view=cards" class="card h-100 p-2 d-flex flex-column employee-card" style="overflow:hidden;">
+                <a href="{% url 'employee_detail' employee.pk %}?view=cards&page={{ page_obj.number }}" class="card h-100 p-2 d-flex flex-column employee-card" style="overflow:hidden;">
                     <div class="d-flex flex-row align-items-stretch employee-card-flex" style="min-height:120px;">
                         {% if employee.photo %}
                             <img src="{{ employee.photo.url }}" class="rounded border flex-shrink-0 employee-card-photo" alt="{{ employee }}" style="width:100px; height:120px; object-fit:cover; margin-right: 12px;">
@@ -91,36 +91,42 @@
                     <th>ФИО</th>
                     <th>Подразделение</th>
                     <th>Должность</th>
-                    <th>Статус</th>
-                    <th>Пропуск</th>
+                    <th>Уволен</th>
+                    <th>Выдан пропуск</th>
+                    <th>Утерян пропуск</th>
                 </tr>
             </thead>
             <tbody>
                 {% for employee in page_obj %}
-                <tr class="employee-row-link" title="Открыть профиль сотрудника" onclick="window.location.href='{% url 'employee_detail' employee.pk %}?view=list'">
+                <tr class="employee-row-link" title="Открыть профиль сотрудника" onclick="window.location.href='{% url 'employee_detail' employee.pk %}?view=list&page={{ page_obj.number }}'">
                     <td>{{ employee }}</td>
                     <td>{{ employee.department }}</td>
                     <td>{{ employee.position }}</td>
                     <td>
                         {% if employee.is_fired %}
-                            <span class="badge bg-danger">Уволен</span>
+                            <span class="badge bg-danger">Да</span>
                         {% else %}
-                            <span class="badge bg-success">Работает</span>
+                            <span class="badge bg-success">Нет</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if employee.has_pass %}
+                            <span class="badge bg-success">Да</span>
+                        {% else %}
+                            <span class="badge bg-warning">Нет</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if employee.lost_pass %}
-                            <span class="badge bg-danger">Утерян</span>
-                        {% elif employee.has_pass %}
-                            <span class="badge bg-success">Выдан</span>
+                            <span class="badge bg-danger">Да</span>
                         {% else %}
-                            <span class="badge bg-warning">Не выдан</span>
+                            <span class="badge bg-success">Нет</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center">Сотрудники не найдены</td>
+                    <td colspan="6" class="text-center">Сотрудники не найдены</td>
                 </tr>
                 {% endfor %}
             </tbody>
