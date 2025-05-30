@@ -6,84 +6,142 @@ from import_export import resources
 from .models import Employee, Department, Position
 from django.contrib.auth.models import User
 from import_export.results import RowResult
+from import_export.fields import Field
 
 logger = logging.getLogger(__name__)
 
 class EmployeeResource(resources.ModelResource):
+    # Добавляем поля для экспорта
+    department = Field(attribute='department', column_name='department')
+    position = Field(attribute='position', column_name='position')
+    lost_pass = Field(attribute='lost_pass', column_name='lost_pass')
+
     class Meta:
         model = Employee
         fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
-        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
+        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass', 'lost_pass')
 
-    def before_import_row(self, row, row_number=None, **kwargs):
-        logger.info(f"Импорт строки {row_number}: {row}")
-        # Подразделение
-        dep_val = row.get('department') or row.get('department__name')
-        if dep_val:
-            dep_val = str(dep_val).strip()
+    def before_import_row(self, row, **kwargs):
+        """Обработка данных перед импортом"""
+        logger.info(f"Импорт сотрудника: {row}")
+        
+        # Очищаем строковые поля от лишних пробелов
+        for field in ['last_name', 'first_name', 'middle_name', 'department', 'position']:
+            if field in row and row[field]:
+                row[field] = row[field].strip()
+        
+        # Проверяем наличие обязательных полей
+        if not all(row.get(field) for field in ['last_name', 'first_name', 'department', 'position']):
+            logger.error("Отсутствуют обязательные поля")
+            return
+        
+        # Обработка подразделения
+        dep_val = row.get('department', '').strip()
+        if not dep_val:
+            logger.error("Пустое значение подразделения")
+            return
+            
+        try:
             if dep_val.isdigit():
-                try:
-                    dep = Department.objects.get(pk=int(dep_val))
-                    logger.info(f"Найдено подразделение по ID: {dep}")
-                except Department.DoesNotExist:
-                    logger.error(f"Подразделение с id={dep_val} не найдено")
-                    raise Exception(f"Строка {row_number or ''}: подразделение с id={dep_val} не найдено")
+                dep = Department.objects.get(pk=int(dep_val))
             else:
                 dep, created = Department.objects.get_or_create(
                     name=dep_val,
                     defaults={'full_name': dep_val}
                 )
                 if created:
-                    logger.info(f"Создано новое подразделение: {dep}")
+                    logger.info(f"Создано новое подразделение: {dep.name}")
                 else:
-                    logger.info(f"Использовано существующее подразделение: {dep}")
-            row['department'] = dep.pk
-        # Должность
-        pos_val = row.get('position') or row.get('position__name')
-        if pos_val:
-            pos_val = str(pos_val).strip()
+                    logger.info(f"Найдено существующее подразделение: {dep.name}")
+            # Устанавливаем значение в row
+            row['department'] = dep
+        except Department.DoesNotExist:
+            logger.error(f"Подразделение не найдено: {dep_val}")
+            return
+        except Exception as e:
+            logger.error(f"Ошибка при обработке подразделения: {str(e)}")
+            return
+
+        # Обработка должности
+        pos_val = row.get('position', '').strip()
+        if not pos_val:
+            logger.error("Пустое значение должности")
+            return
+            
+        try:
             if pos_val.isdigit():
-                try:
-                    pos = Position.objects.get(pk=int(pos_val))
-                    logger.info(f"Найдена должность по ID: {pos}")
-                except Position.DoesNotExist:
-                    logger.error(f"Должность с id={pos_val} не найдена")
-                    raise Exception(f"Строка {row_number or ''}: должность с id={pos_val} не найдена")
+                pos = Position.objects.get(pk=int(pos_val))
             else:
                 pos, created = Position.objects.get_or_create(
                     name=pos_val,
                     defaults={'full_name': pos_val}
                 )
                 if created:
-                    logger.info(f"Создана новая должность: {pos}")
+                    logger.info(f"Создана новая должность: {pos.name}")
                 else:
-                    logger.info(f"Использована существующая должность: {pos}")
-            row['position'] = pos.pk
-        # Фото
-        photo_path = row.get('photo')
-        if photo_path:
-            photo_path = str(photo_path).replace('\\', '/').replace('\\', '/')
-            if not photo_path.startswith('employee_photos/'):
-                src_path = os.path.join(settings.BASE_DIR, photo_path)
-                if os.path.exists(src_path):
-                    dst_dir = os.path.join(settings.MEDIA_ROOT, 'employee_photos')
-                    os.makedirs(dst_dir, exist_ok=True)
-                    dst_path = os.path.join(dst_dir, os.path.basename(photo_path))
-                    shutil.copy2(src_path, dst_path)
-                    row['photo'] = f'employee_photos/{os.path.basename(photo_path)}'
-                    logger.info(f"Скопировано фото: {src_path} -> {dst_path}")
-                else:
-                    logger.warning(f"Файл фото не найден: {src_path}")
-                    row['photo'] = ''
-            else:
-                logger.info(f"Использовано существующее фото: {photo_path}")
-                row['photo'] = photo_path
+                    logger.info(f"Найдена существующая должность: {pos.name}")
+            # Устанавливаем значение в row
+            row['position'] = pos
+        except Position.DoesNotExist:
+            logger.error(f"Должность не найдена: {pos_val}")
+            return
+        except Exception as e:
+            logger.error(f"Ошибка при обработке должности: {str(e)}")
+            return
 
-    def after_import_row(self, row, row_result, row_number=None, **kwargs):
-        if row_result.import_type == RowResult.IMPORT_TYPE_NEW:
-            logger.info(f"Создан новый сотрудник: {row.get('last_name')} {row.get('first_name')}")
-        elif row_result.import_type == RowResult.IMPORT_TYPE_UPDATE:
-            logger.info(f"Обновлен сотрудник: {row.get('last_name')} {row.get('first_name')}")
+        # Проверяем существование сотрудника
+        try:
+            existing_employee = Employee.objects.filter(
+                last_name=row['last_name'].strip(),
+                first_name=row['first_name'].strip(),
+                middle_name=row.get('middle_name', '').strip(),
+                department=dep,
+                position=pos
+            ).first()
+            
+            if existing_employee:
+                logger.info(f"Найден существующий сотрудник: {existing_employee}")
+                # Обновляем только непустые поля
+                for field in ['photo', 'pass_svg', 'is_fired', 'has_pass']:
+                    if field in row and row[field] and row[field].strip():
+                        setattr(existing_employee, field, row[field].strip())
+                existing_employee.save()
+                # Прерываем импорт этой строки
+                return False
+                
+        except Exception as e:
+            logger.error(f"Ошибка при проверке существующего сотрудника: {str(e)}")
+            return
+
+        # Обработка фотографии
+        if row.get('photo'):
+            photo_path = row['photo'].strip()
+            if not photo_path:
+                return
+                
+            src_path = os.path.join(settings.MEDIA_ROOT, photo_path)
+            if os.path.exists(src_path):
+                try:
+                    if not photo_path.startswith('employee_photos/'):
+                        dst_dir = os.path.join(settings.MEDIA_ROOT, 'employee_photos')
+                        os.makedirs(dst_dir, exist_ok=True)
+                        dst_path = os.path.join(dst_dir, os.path.basename(photo_path))
+                        shutil.copy2(src_path, dst_path)
+                        row['photo'] = f'employee_photos/{os.path.basename(photo_path)}'
+                        logger.info(f"Скопирована фотография: {row['photo']}")
+                except Exception as e:
+                    logger.error(f"Ошибка при копировании фотографии: {str(e)}")
+                    return
+            else:
+                logger.error(f"Файл фотографии не найден: {src_path}")
+                return
+
+    def after_import_row(self, row, row_result, **kwargs):
+        """Обработка после импорта строки"""
+        if row_result.import_type == row_result.IMPORT_TYPE_NEW:
+            logger.info(f"Создан новый сотрудник: {row}")
+        elif row_result.import_type == row_result.IMPORT_TYPE_UPDATE:
+            logger.info(f"Обновлен существующий сотрудник: {row}")
 
 class DepartmentResource(resources.ModelResource):
     class Meta:
