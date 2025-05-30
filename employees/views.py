@@ -407,3 +407,38 @@ def import_pass_template(request):
             'success': False, 
             'message': f'Ошибка при сохранении: {str(e)}'
         }, status=500)
+
+@login_required
+def employees_without_pass(request):
+    """Список сотрудников без пропуска"""
+    employees = Employee.objects.filter(
+        Q(pass_svg__isnull=True) | Q(lost_pass=True) | Q(has_pass=False)
+    ).order_by('last_name', 'first_name')
+    search_query = request.GET.get('search', '')
+    if search_query:
+        employees = employees.filter(
+            Q(last_name__iregex=search_query) |
+            Q(first_name__iregex=search_query) |
+            Q(middle_name__iregex=search_query)
+        )
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/employee_list.html', {
+            'page_obj': employees,
+            'view_mode': request.GET.get('view', 'cards'),
+            'search_query': search_query,
+            'show_all': True,
+            'filter_title': 'Сотрудники без пропуска'
+        })
+    
+    paginator = Paginator(employees, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'employees/employee_list.html', {
+        'page_obj': page_obj,
+        'view_mode': request.GET.get('view', 'cards'),
+        'search_query': search_query,
+        'filter_title': 'Сотрудники без пропуска'
+    })

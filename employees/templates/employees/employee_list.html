@@ -4,176 +4,192 @@
 {% block title %}Список сотрудников{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Сотрудники <sup class="text-muted" style="font-size: 0.6em;">({{ page_obj.paginator.count }})</sup></h1>
-    <div class="d-flex align-items-center gap-2">
-        <form method="get" class="d-flex">
-            <input type="text" name="search" class="form-control me-2" placeholder="Поиск..." value="{{ search_query }}">
-            <button type="submit" class="btn btn-outline-secondary">Найти</button>
-        </form>
-        <a href="?view=list" class="btn btn-outline-secondary btn-sm {% if view_mode == 'list' %}active{% endif %}">Список</a>
-        <a href="?view=cards" class="btn btn-outline-secondary btn-sm {% if view_mode == 'cards' %}active{% endif %}">Карточки</a>
-        {% if user.is_superuser or user|has_group:"Администратор" %}
-            <a href="{% url 'employee_create' %}" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Добавить сотрудника">
-                <i class="bi bi-plus-lg"></i>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{% if filter_title %}{{ filter_title }}{% else %}Сотрудники{% endif %} <sup class="text-muted" style="font-size: 0.6em;">({{ page_obj.paginator.count }})</sup></h2>
+        <div class="d-flex gap-2">
+            <div class="btn-group">
+                <form method="get" class="d-flex">
+                    <input type="text" name="search" class="form-control me-2" placeholder="Поиск..." value="{{ search_query }}">
+                    <button type="submit" class="btn btn-outline-secondary">Найти</button>
+                </form>
+                <a href="?view=list" class="btn btn-outline-secondary btn-sm {% if view_mode == 'list' %}active{% endif %}">Список</a>
+                <a href="?view=cards" class="btn btn-outline-secondary btn-sm {% if view_mode == 'cards' %}active{% endif %}">Карточки</a>
+                {% if user.is_superuser or user|has_group:"Администратор" %}
+                    <a href="{% url 'employee_create' %}" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Добавить сотрудника">
+                        <i class="bi bi-plus-lg"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if filter_title %}
+        <h4 class="mb-3">{{ filter_title }}</h4>
+    {% endif %}
+
+    {% if view_mode == 'cards' %}
+        <style>
+            @media (max-width: 576px) {
+                .employee-card-flex { flex-direction: column !important; align-items: center !important; min-height: unset !important; }
+                .employee-card-photo { margin-bottom: 8px !important; margin-right: 0 !important; }
+                .employee-card-info { margin-left: 0 !important; text-align: center; }
+                .employee-card-footer { flex-direction: column !important; gap: 0.5rem !important; align-items: stretch !important; }
+            }
+            .employee-card { max-width: 320px; margin-left: auto; margin-right: auto; transition: box-shadow 0.2s, border-color 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
+            .employee-card:hover, .employee-card:focus { box-shadow: 0 0 0 2px #0d6efd; border-color: #0d6efd; text-decoration: none; color: inherit; }
+            .employee-card-footer { justify-content: center !important; text-align: center; }
+            .employee-row-link { cursor: pointer; transition: background 0.15s; }
+            .employee-row-link:hover, .employee-row-link:focus { background: #e7f1ff; text-decoration: none; }
+        </style>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for employee in page_obj %}
+                <div class="col">
+                    <a href="{% url 'employee_detail' employee.pk %}?view=cards&page={{ page_obj.number }}" class="card h-100 p-2 d-flex flex-column employee-card" style="overflow:hidden;">
+                        <div class="d-flex flex-row align-items-stretch employee-card-flex" style="min-height:120px;">
+                            {% if employee.photo %}
+                                <img src="{{ employee.photo.url }}" class="rounded border flex-shrink-0 employee-card-photo" alt="{{ employee }}" style="width:100px; height:120px; object-fit:cover; margin-right: 12px;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center rounded border flex-shrink-0 employee-card-photo" style="width:100px; height:120px; font-size:12px; margin-right: 12px;">Фото<br>нет</div>
+                            {% endif %}
+                            <div class="ms-3 flex-grow-1 d-flex flex-column justify-content-center employee-card-info" style="min-width:0;">
+                                <div class="fw-bold text-truncate" title="{{ employee.last_name }}">{{ employee.last_name }}</div>
+                                <div class="fw-bold text-truncate" title="{{ employee.first_name }}">{{ employee.first_name }}</div>
+                                <div class="fw-bold text-truncate" title="{{ employee.middle_name }}">{{ employee.middle_name }}</div>
+                                <div class="text-muted text-truncate mt-1" title="{{ employee.department }}">{{ employee.department }}</div>
+                                <div class="text-muted text-truncate" title="{{ employee.position }}">{{ employee.position }}</div>
+                            </div>
+                        </div>
+                        <div class="mt-auto pt-2 border-top d-flex flex-wrap flex-column align-items-center gap-2 employee-card-footer" style="min-height:48px;">
+                            <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                {% if employee.is_fired %}
+                                    <span class="badge bg-danger" title="Уволен">Уволен</span>
+                                {% else %}
+                                    <span class="badge bg-success" title="Работает">Работает</span>
+                                {% endif %}
+                                {% if employee.lost_pass %}
+                                    <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
+                                {% elif employee.has_pass %}
+                                    <span class="badge bg-success" title="Выдан пропуск">Выдан пропуск</span>
+                                {% else %}
+                                    <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center">Сотрудники не найдены</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <style>
+            .employee-row-link { cursor: pointer; transition: background 0.15s; }
+            .employee-row-link:hover, .employee-row-link:focus { background: #e7f1ff; text-decoration: none; }
+        </style>
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Подразделение</th>
+                        <th>Должность</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in page_obj %}
+                    <tr class="employee-row-link" title="Открыть профиль сотрудника" onclick="window.location.href='{% url 'employee_detail' employee.pk %}?view=list&page={{ page_obj.number }}'">
+                        <td>{{ employee }}</td>
+                        <td>{{ employee.department }}</td>
+                        <td>{{ employee.position }}</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% if employee.is_fired %}
+                                    <span class="badge bg-danger" title="Уволен">Уволен</span>
+                                {% endif %}
+                                {% if employee.lost_pass %}
+                                    <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
+                                {% elif not employee.has_pass %}
+                                    <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">Сотрудники не найдены</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+            {% if page_obj.paginator.num_pages <= 3 %}
+                {% for i in page_obj.paginator.page_range %}
+                    <li class="page-item {% if i == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ i }}</a>
+                    </li>
+                {% endfor %}
+            {% else %}
+                {% with current=page_obj.number %}
+                    {% if current > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current|add:'-1' }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ current|add:'-1' }}</a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ current }}</span>
+                    </li>
+                    {% if current < page_obj.paginator.num_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ current|add:'1' }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ current|add:'1' }}</a>
+                        </li>
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <div class="text-center mt-3">
+        {% if not show_all %}
+            <a href="?show_all=1{% if view_mode %}&view={{ view_mode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul"></i> Показать все
+            </a>
+        {% else %}
+            <a href="?{% if view_mode %}view={{ view_mode }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul"></i> По страницам
             </a>
         {% endif %}
     </div>
 </div>
-
-{% if filter_title %}
-    <h4 class="mb-3">{{ filter_title }}</h4>
-{% endif %}
-
-{% if view_mode == 'cards' %}
-    <style>
-        @media (max-width: 576px) {
-            .employee-card-flex { flex-direction: column !important; align-items: center !important; min-height: unset !important; }
-            .employee-card-photo { margin-bottom: 8px !important; margin-right: 0 !important; }
-            .employee-card-info { margin-left: 0 !important; text-align: center; }
-            .employee-card-footer { flex-direction: column !important; gap: 0.5rem !important; align-items: stretch !important; }
-        }
-        .employee-card { max-width: 320px; margin-left: auto; margin-right: auto; transition: box-shadow 0.2s, border-color 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
-        .employee-card:hover, .employee-card:focus { box-shadow: 0 0 0 2px #0d6efd; border-color: #0d6efd; text-decoration: none; color: inherit; }
-        .employee-card-footer { justify-content: center !important; text-align: center; }
-        .employee-row-link { cursor: pointer; transition: background 0.15s; }
-        .employee-row-link:hover, .employee-row-link:focus { background: #e7f1ff; text-decoration: none; }
-    </style>
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for employee in page_obj %}
-            <div class="col">
-                <a href="{% url 'employee_detail' employee.pk %}?view=cards&page={{ page_obj.number }}" class="card h-100 p-2 d-flex flex-column employee-card" style="overflow:hidden;">
-                    <div class="d-flex flex-row align-items-stretch employee-card-flex" style="min-height:120px;">
-                        {% if employee.photo %}
-                            <img src="{{ employee.photo.url }}" class="rounded border flex-shrink-0 employee-card-photo" alt="{{ employee }}" style="width:100px; height:120px; object-fit:cover; margin-right: 12px;">
-                        {% else %}
-                            <div class="bg-light d-flex align-items-center justify-content-center rounded border flex-shrink-0 employee-card-photo" style="width:100px; height:120px; font-size:12px; margin-right: 12px;">Фото<br>нет</div>
-                        {% endif %}
-                        <div class="ms-3 flex-grow-1 d-flex flex-column justify-content-center employee-card-info" style="min-width:0;">
-                            <div class="fw-bold text-truncate" title="{{ employee.last_name }}">{{ employee.last_name }}</div>
-                            <div class="fw-bold text-truncate" title="{{ employee.first_name }}">{{ employee.first_name }}</div>
-                            <div class="fw-bold text-truncate" title="{{ employee.middle_name }}">{{ employee.middle_name }}</div>
-                            <div class="text-muted text-truncate mt-1" title="{{ employee.department }}">{{ employee.department }}</div>
-                            <div class="text-muted text-truncate" title="{{ employee.position }}">{{ employee.position }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-auto pt-2 border-top d-flex flex-wrap flex-column align-items-center gap-2 employee-card-footer" style="min-height:48px;">
-                        <div class="d-flex flex-wrap gap-1 justify-content-center">
-                            {% if employee.is_fired %}
-                                <span class="badge bg-danger" title="Уволен">Уволен</span>
-                            {% else %}
-                                <span class="badge bg-success" title="Работает">Работает</span>
-                            {% endif %}
-                            {% if employee.lost_pass %}
-                                <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
-                            {% elif employee.has_pass %}
-                                <span class="badge bg-success" title="Выдан пропуск">Выдан пропуск</span>
-                            {% else %}
-                                <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </a>
-            </div>
-        {% empty %}
-            <div class="col-12 text-center">Сотрудники не найдены</div>
-        {% endfor %}
-    </div>
-{% else %}
-    <style>
-        .employee-row-link { cursor: pointer; transition: background 0.15s; }
-        .employee-row-link:hover, .employee-row-link:focus { background: #e7f1ff; text-decoration: none; }
-    </style>
-    <div class="table-responsive">
-        <table class="table table-striped mb-0">
-            <thead>
-                <tr>
-                    <th>ФИО</th>
-                    <th>Подразделение</th>
-                    <th>Должность</th>
-                    <th>Статус</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for employee in page_obj %}
-                <tr class="employee-row-link" title="Открыть профиль сотрудника" onclick="window.location.href='{% url 'employee_detail' employee.pk %}?view=list&page={{ page_obj.number }}'">
-                    <td>{{ employee }}</td>
-                    <td>{{ employee.department }}</td>
-                    <td>{{ employee.position }}</td>
-                    <td>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% if employee.is_fired %}
-                                <span class="badge bg-danger" title="Уволен">Уволен</span>
-                            {% endif %}
-                            {% if employee.lost_pass %}
-                                <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
-                            {% elif not employee.has_pass %}
-                                <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center">Сотрудники не найдены</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-{% endif %}
-
-{% if page_obj.paginator.num_pages > 1 %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="First">
-                    <span aria-hidden="true">&laquo;&laquo;</span>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
-        {% endif %}
-        {% if page_obj.paginator.num_pages <= 3 %}
-            {% for i in page_obj.paginator.page_range %}
-                <li class="page-item {% if i == page_obj.number %}active{% endif %}">
-                    <a class="page-link" href="?page={{ i }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ i }}</a>
-                </li>
-            {% endfor %}
-        {% else %}
-            {% with current=page_obj.number %}
-                {% if current > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current|add:'-1' }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ current|add:'-1' }}</a>
-                    </li>
-                {% endif %}
-                <li class="page-item active">
-                    <span class="page-link">{{ current }}</span>
-                </li>
-                {% if current < page_obj.paginator.num_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ current|add:'1' }}{% if view_mode %}&view={{ view_mode }}{% endif %}">{{ current|add:'1' }}</a>
-                    </li>
-                {% endif %}
-            {% endwith %}
-        {% endif %}
-        {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if view_mode %}&view={{ view_mode }}{% endif %}" aria-label="Last">
-                    <span aria-hidden="true">&raquo;&raquo;</span>
-                </a>
-            </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
 {% endblock %} 

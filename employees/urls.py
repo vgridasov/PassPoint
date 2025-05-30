@@ -14,4 +14,5 @@ urlpatterns = [
     path('position/<int:position_id>/employees/', views.employees_by_position, name='employees_by_position'),
     path('employee/<int:pk>/create-pass/', views.create_pass, name='create_pass'),
     path('employee/import-pass-template/', views.import_pass_template, name='import_pass_template'),
+    path('employees/without-pass/', views.employees_without_pass, name='employees_without_pass'),
 ] 
