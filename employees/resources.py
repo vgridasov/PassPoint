@@ -16,10 +16,28 @@ class EmployeeResource(resources.ModelResource):
     position = Field(attribute='position', column_name='position')
     lost_pass = Field(attribute='lost_pass', column_name='lost_pass')
 
+    # Сопоставление русских заголовков с полями модели
+    RUSSIAN_FIELD_MAP = {
+        'Фамилия': 'last_name',
+        'Имя': 'first_name',
+        'Отчество': 'middle_name',
+        'Подразделение': 'department',
+        'Должность': 'position',
+        'Пропуск': 'has_pass',
+        'Уволен': 'is_fired',
+    }
+
     class Meta:
         model = Employee
         fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
         export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass', 'lost_pass')
+
+    def import_row(self, row, instance_loader, **kwargs):
+        # Сопоставляем русские заголовки с полями модели
+        for ru, en in self.RUSSIAN_FIELD_MAP.items():
+            if ru in row and en not in row:
+                row[en] = row[ru]
+        return super().import_row(row, instance_loader, **kwargs)
 
     def before_import_row(self, row, **kwargs):
         """Обработка данных перед импортом"""
@@ -101,13 +119,13 @@ class EmployeeResource(resources.ModelResource):
             
             if existing_employee:
                 logger.info(f"Найден существующий сотрудник: {existing_employee}")
+                # Устанавливаем ID существующего сотрудника для обновления
+                row['id'] = existing_employee.id
                 # Обновляем только непустые поля
                 for field in ['photo', 'pass_svg', 'is_fired', 'has_pass']:
                     if field in row and row[field] and row[field].strip():
                         setattr(existing_employee, field, row[field].strip())
                 existing_employee.save()
-                # Прерываем импорт этой строки
-                return False
                 
         except Exception as e:
             logger.error(f"Ошибка при проверке существующего сотрудника: {str(e)}")
