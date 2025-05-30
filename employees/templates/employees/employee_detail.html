@@ -84,7 +84,7 @@
         </div>
         <div class="d-flex gap-2">
             {% if user.is_superuser or user|has_group:"Администратор" %}
-                <a href="{% url 'employee_edit' employee.pk %}" class="btn btn-warning">Редактировать</a>
+                <a href="{% url 'employee_edit' employee.pk %}?view={{ view_mode }}&page={{ page }}" class="btn btn-warning">Редактировать</a>
             {% endif %}
             {% if view_mode == 'list' %}
                 <a href="{% url 'employee_list' %}?view=list&page={{ page }}" class="btn btn-secondary">Назад к списку</a>

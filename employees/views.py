@@ -122,6 +122,9 @@ def employee_create(request):
 @user_passes_test(is_admin)
 def employee_edit(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
+    view_mode = request.GET.get('view', 'cards')
+    page = request.GET.get('page', '1')
+    
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
@@ -137,7 +140,13 @@ def employee_edit(request, pk):
                 except Exception as e:
                     logger.error(f"Ошибка при сохранении кадрированного фото из файла: {str(e)}")
                     messages.error(request, 'Ошибка при сохранении фото')
-                    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
+                    return render(request, 'employees/employee_form.html', {
+                        'form': form, 
+                        'title': 'Редактировать сотрудника',
+                        'view_mode': view_mode,
+                        'page': page,
+                        'employee': employee
+                    })
             else:
                 # Обработка фото с веб-камеры
                 webcam_photo = request.POST.get('webcam_photo')
@@ -151,14 +160,26 @@ def employee_edit(request, pk):
                     except Exception as e:
                         logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
                         messages.error(request, 'Ошибка при сохранении фото')
-                        return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
+                        return render(request, 'employees/employee_form.html', {
+                            'form': form, 
+                            'title': 'Редактировать сотрудника',
+                            'view_mode': view_mode,
+                            'page': page,
+                            'employee': employee
+                        })
 
             form.save()
             messages.success(request, 'Данные сотрудника обновлены')
-            return redirect('employee_list')
+            return redirect(f'/employee/{employee.pk}/?view={view_mode}&page={page}')
     else:
         form = EmployeeForm(instance=employee)
-    return render(request, 'employees/employee_form.html', {'form': form, 'title': 'Редактировать сотрудника'})
+    return render(request, 'employees/employee_form.html', {
+        'form': form, 
+        'title': 'Редактировать сотрудника',
+        'view_mode': view_mode,
+        'page': page,
+        'employee': employee
+    })
 
 @login_required
 def department_list(request):
