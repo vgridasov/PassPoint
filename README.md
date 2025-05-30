@@ -1,51 +1,29 @@
-# Система учета сотрудников
+# Система управления персоналом
 
-Django-приложение для учета пропусков сотрудников с авторизацией, фото, отметками и статусами.
+Система для управления данными сотрудников, включая их профили, подразделения и должности.
 
-## Функциональность
+## Требования к системе
 
-- Авторизация пользователей с ролями "Администратор" и "Контролёр"
-- Учет сотрудников с фото и пропусками
-- Управление подразделениями и должностями
-- Импорт/экспорт данных через админку
-- Генерация пропусков в формате SVG
-- Поиск и фильтрация сотрудников
-- Два режима просмотра: список и карточки
+- Python 3.13+
+- PostgreSQL 15+
+- Nginx
+- Ubuntu 22.04 LTS или новее
+- 2GB RAM минимум
+- 20GB свободного места на диске
 
-## Фото сотрудников через веб-камеру
-
-В форме создания и редактирования сотрудника доступна возможность сделать фото прямо с веб-камеры:
-
-- Можно выбрать: загрузить файл или сделать снимок с камеры.
-- При выборе "Сделать фото" открывается окно предпросмотра с рамкой 3:4.
-- Лицо сотрудника должно быть в центре рамки для корректного кадрирования.
-- Можно переснять фото, если результат не устраивает.
-- Фото сохраняется в том же поле, что и при загрузке файла.
-- Все современные браузеры поддерживаются (нужны права на доступ к камере).
-
-**Важно:** если камера не найдена или доступ запрещён, используйте загрузку файла.
-
-## Технические особенности
-
-- Python 3.13
-- Django 5.2.1
-- Bootstrap 5
-- SQLite
-- django-import-export
-- Контекстные процессоры для настроек организации
-
-## Установка
+## Установка для разработки
 
 1. Клонировать репозиторий:
 ```bash
-git clone https://github.com/vgridasov/employee-management.git
-cd employee-management
+git clone https://github.com/your-username/inventory.git
+cd inventory
 ```
 
 2. Создать виртуальное окружение:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/Mac
 ```
 
 3. Установить зависимости:
@@ -53,40 +31,165 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-4. Применить миграции:
+4. Создать файл .env:
+```bash
+cp .env.example .env
+# Отредактировать .env, заполнив необходимые значения
+```
+
+5. Применить миграции:
 ```bash
 python manage.py migrate
 ```
 
-5. Создать суперпользователя:
+6. Создать суперпользователя:
 ```bash
 python manage.py createsuperuser
 ```
 
-6. Собрать статические файлы:
+7. Собрать статические файлы:
 ```bash
 python manage.py collectstatic
 ```
 
-7. Запустить сервер:
+8. Запустить сервер:
 ```bash
 python manage.py runserver
 ```
 
-## Использование
+## Деплой на продакшен
 
-1. Войдите в админку как суперпользователь
-2. Группы "Администратор" и "Контролёр" создаются автоматически при миграции
-3. Назначьте пользователям соответствующие группы
-4. Используйте систему согласно ролям:
-   - Администратор: полный доступ к CRUD-операциям
-   - Контролёр: только просмотр данных
+### 1. Подготовка сервера
 
-## Импорт данных
+```bash
+# Обновить систему
+sudo apt update && sudo apt upgrade -y
 
-1. Профили сотрудников, подразделения и должности можно импортировать через админку
-2. Поддерживаются форматы CSV, Excel и другие.
+# Установить необходимые пакеты
+sudo apt install python3.13 python3.13-venv postgresql postgresql-contrib nginx supervisor -y
+```
 
+### 2. Настройка PostgreSQL
+
+```bash
+# Войти в PostgreSQL
+sudo -u postgres psql
+
+# Создать базу данных и пользователя
+CREATE DATABASE inventory;
+CREATE USER inventory_user WITH PASSWORD 'your_secure_password';
+ALTER ROLE inventory_user SET client_encoding TO 'utf8';
+ALTER ROLE inventory_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE inventory_user SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE inventory TO inventory_user;
+\q
+```
+
+### 3. Настройка Nginx
+
+```bash
+# Создать конфигурацию
+sudo nano /etc/nginx/sites-available/inventory
+
+# Добавить конфигурацию
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    
+    location /static/ {
+        root /var/www/inventory;
+    }
+
+    location /media/ {
+        root /var/www/inventory;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}
+
+# Активировать конфигурацию
+sudo ln -s /etc/nginx/sites-available/inventory /etc/nginx/sites-enabled
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 4. Настройка SSL с Let's Encrypt
+
+```bash
+# Установить Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Получить сертификат
+sudo certbot --nginx -d your-domain.com
+
+# Настроить автообновление
+sudo certbot renew --dry-run
+```
+
+### 5. Настройка Gunicorn
+
+```bash
+# Создать конфигурацию
+sudo nano /etc/supervisor/conf.d/inventory.conf
+
+# Добавить конфигурацию
+[program:inventory]
+directory=/var/www/inventory
+command=/var/www/inventory/.venv/bin/gunicorn employee_management.wsgi:application --workers 3 --bind unix:/run/gunicorn.sock
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/inventory/gunicorn.err.log
+stdout_logfile=/var/log/inventory/gunicorn.out.log
+user=www-data
+group=www-data
+environment=
+    DJANGO_SETTINGS_MODULE="employee_management.settings",
+    PATH="/var/www/inventory/.venv/bin"
+
+# Перезапустить Supervisor
+sudo supervisorctl reread
+sudo supervisorctl update
+```
+
+### 6. Деплой приложения
+
+```bash
+# Создать директорию
+sudo mkdir -p /var/www/inventory
+
+# Клонировать репозиторий
+sudo git clone https://github.com/vgridasov/inventory.git /var/www/inventory
+
+# Установить права
+sudo chown -R www-data:www-data /var/www/inventory
+sudo chmod -R 755 /var/www/inventory
+
+# Создать и активировать виртуальное окружение
+cd /var/www/inventory
+python3.13 -m venv .venv
+source .venv/bin/activate
+
+# Установить зависимости
+pip install -r requirements.txt
+
+# Создать .env файл
+sudo nano .env
+# Заполнить необходимые переменные окружения
+
+# Применить миграции
+python manage.py migrate
+
+# Собрать статические файлы
+python manage.py collectstatic
+
+# Перезапустить Gunicorn
+sudo supervisorctl restart inventory
+```
 
 ## Структура проекта
 
@@ -100,11 +203,16 @@ inventory/
 └── manage.py          # Скрипт управления
 ```
 
-## Настройка для продакшена
+## Тестирование
 
-1. Измените `SECRET_KEY` в settings.py
-2. Установите `DEBUG = False`
-3. Настройте `ALLOWED_HOSTS`
-4. Настройте статические файлы через веб-сервер
-5. Используйте PostgreSQL вместо SQLite
-6. Настройте бэкапы базы данных 
+```bash
+# Запуск тестов
+pytest
+
+# Запуск тестов с отчетом о покрытии
+pytest --cov=employees
+```
+
+## Лицензия
+
+MIT 
