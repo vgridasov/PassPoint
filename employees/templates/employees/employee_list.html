@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>{% if filter_title %}{{ filter_title }}{% else %}Сотрудники{% endif %} <sup class="text-muted" style="font-size: 0.6em;">({{ page_obj.paginator.count }})</sup></h2>
+        <h2>{% if filter_title %}{{ filter_title }}{% else %}Сотрудники{% endif %} <sup class="text-muted" style="font-size: 0.6em;">({% if show_all %}{{ total_count }}{% else %}{{ page_obj.paginator.count }}{% endif %})</sup></h2>
         <div class="d-flex gap-2">
             <div class="btn-group">
                 <form method="get" class="d-flex">

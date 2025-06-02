@@ -46,7 +46,8 @@ def employee_list(request):
             'page_obj': employees,
             'view_mode': request.GET.get('view', 'cards'),
             'search_query': search_query,
-            'show_all': True
+            'show_all': True,
+            'total_count': employees.count()
         })
     
     paginator = Paginator(employees, 12)
@@ -193,7 +194,8 @@ def department_list(request):
         return render(request, 'employees/department_list.html', {
             'page_obj': departments,
             'search_query': search_query,
-            'show_all': True
+            'show_all': True,
+            'total_count': departments.count()
         })
     
     paginator = Paginator(departments, 10)
@@ -229,7 +231,8 @@ def position_list(request):
         return render(request, 'employees/position_list.html', {
             'page_obj': positions,
             'search_query': search_query,
-            'show_all': True
+            'show_all': True,
+            'total_count': positions.count()
         })
     
     paginator = Paginator(positions, 10)
@@ -273,7 +276,8 @@ def employees_by_department(request, department_id):
             'view_mode': request.GET.get('view', 'cards'),
             'search_query': search_query,
             'show_all': True,
-            'filter_title': f'Сотрудники подразделения: {department.name}'
+            'filter_title': f'Сотрудники подразделения: {department.name}',
+            'total_count': employees.count()
         })
     
     paginator = Paginator(employees, 10)
@@ -307,7 +311,8 @@ def employees_by_position(request, position_id):
             'view_mode': request.GET.get('view', 'cards'),
             'search_query': search_query,
             'show_all': True,
-            'filter_title': f'Сотрудники должности: {position.name}'
+            'filter_title': f'Сотрудники должности: {position.name}',
+            'total_count': employees.count()
         })
     
     paginator = Paginator(employees, 10)
@@ -469,7 +474,8 @@ def employees_without_pass(request):
             'view_mode': request.GET.get('view', 'cards'),
             'search_query': search_query,
             'show_all': True,
-            'filter_title': 'Сотрудники без пропуска'
+            'filter_title': 'Сотрудники без пропуска',
+            'total_count': employees.count()
         })
     
     paginator = Paginator(employees, 12)
