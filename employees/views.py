@@ -257,6 +257,25 @@ def position_create(request):
 def employees_by_department(request, department_id):
     department = get_object_or_404(Department, pk=department_id)
     employees = Employee.objects.filter(department=department).order_by('last_name', 'first_name')
+    
+    search_query = request.GET.get('search', '')
+    if search_query:
+        employees = employees.filter(
+            Q(last_name__iregex=search_query) |
+            Q(first_name__iregex=search_query) |
+            Q(middle_name__iregex=search_query)
+        )
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/employee_list.html', {
+            'page_obj': employees,
+            'view_mode': request.GET.get('view', 'cards'),
+            'search_query': search_query,
+            'show_all': True,
+            'filter_title': f'Сотрудники подразделения: {department.name}'
+        })
+    
     paginator = Paginator(employees, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -264,6 +283,7 @@ def employees_by_department(request, department_id):
     return render(request, 'employees/employee_list.html', {
         'page_obj': page_obj,
         'view_mode': view_mode,
+        'search_query': search_query,
         'filter_title': f'Сотрудники подразделения: {department.name}',
     })
 
@@ -271,6 +291,25 @@ def employees_by_department(request, department_id):
 def employees_by_position(request, position_id):
     position = get_object_or_404(Position, pk=position_id)
     employees = Employee.objects.filter(position=position).order_by('last_name', 'first_name')
+    
+    search_query = request.GET.get('search', '')
+    if search_query:
+        employees = employees.filter(
+            Q(last_name__iregex=search_query) |
+            Q(first_name__iregex=search_query) |
+            Q(middle_name__iregex=search_query)
+        )
+    
+    # Если запрошен полный список
+    if request.GET.get('show_all'):
+        return render(request, 'employees/employee_list.html', {
+            'page_obj': employees,
+            'view_mode': request.GET.get('view', 'cards'),
+            'search_query': search_query,
+            'show_all': True,
+            'filter_title': f'Сотрудники должности: {position.name}'
+        })
+    
     paginator = Paginator(employees, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -278,6 +317,7 @@ def employees_by_position(request, position_id):
     return render(request, 'employees/employee_list.html', {
         'page_obj': page_obj,
         'view_mode': view_mode,
+        'search_query': search_query,
         'filter_title': f'Сотрудники должности: {position.name}',
     })
 
