@@ -12,14 +12,54 @@ import os
 import base64
 from django.conf import settings
 from django.http import JsonResponse
+from django.contrib.admin import SimpleListFilter
 
 logger = logging.getLogger(__name__)
+
+class NoPassFilter(SimpleListFilter):
+    """Фильтр для сотрудников без пропуска"""
+    title = 'Статус пропуска'
+    parameter_name = 'pass_status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('no_pass', 'Нет пропуска'),
+            ('has_pass', 'Есть пропуск'),
+            ('lost_pass', 'Утерян пропуск'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'no_pass':
+            return queryset.filter(has_pass=False, lost_pass=False)
+        if self.value() == 'has_pass':
+            return queryset.filter(has_pass=True, lost_pass=False)
+        if self.value() == 'lost_pass':
+            return queryset.filter(lost_pass=True)
+        return queryset
+
+class NoPhotoFilter(SimpleListFilter):
+    """Фильтр для сотрудников без фото"""
+    title = 'Наличие фото'
+    parameter_name = 'photo_status'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('no_photo', 'Нет фото'),
+            ('has_photo', 'Есть фото'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'no_photo':
+            return queryset.filter(photo__isnull=True) | queryset.filter(photo='')
+        if self.value() == 'has_photo':
+            return queryset.exclude(photo__isnull=True).exclude(photo='')
+        return queryset
 
 @admin.register(Employee)
 class EmployeeAdmin(ImportExportModelAdmin):
     resource_class = EmployeeResource
     list_display = ('last_name', 'first_name', 'middle_name', 'department', 'position', 'is_fired', 'has_pass', 'lost_pass')
-    list_filter = ('department', 'position', 'is_fired', 'has_pass', 'lost_pass')
+    list_filter = ('department', 'position', 'is_fired', NoPassFilter, NoPhotoFilter)
     search_fields = ('last_name', 'first_name', 'middle_name')
     change_list_template = 'admin/import_export/change_list_import_export.html'
     actions = ['create_passes']
@@ -43,6 +83,7 @@ class EmployeeAdmin(ImportExportModelAdmin):
         """Массовое создание пропусков для выбранных сотрудников"""
         success_count = 0
         error_count = 0
+        skipped_count = 0
         
         # Чтение шаблона пропуска
         template_path = os.path.join(settings.MEDIA_ROOT, 'pass-template.svg')
@@ -55,14 +96,21 @@ class EmployeeAdmin(ImportExportModelAdmin):
 
         for employee in queryset:
             try:
+                # Проверка наличия фото
+                if not employee.photo:
+                    logger.warning(f"Пропуск пропуска для {employee}: отсутствует фото")
+                    skipped_count += 1
+                    continue
+
                 # Подготовка фото в base64
                 photo_base64 = ''
-                if employee.photo:
-                    try:
-                        with open(employee.photo.path, 'rb') as f:
-                            photo_base64 = base64.b64encode(f.read()).decode('utf-8')
-                    except Exception as e:
-                        logger.error(f"Ошибка при чтении фото для {employee}: {str(e)}")
+                try:
+                    with open(employee.photo.path, 'rb') as f:
+                        photo_base64 = base64.b64encode(f.read()).decode('utf-8')
+                except Exception as e:
+                    logger.error(f"Ошибка при чтении фото для {employee}: {str(e)}")
+                    skipped_count += 1
+                    continue
                 
                 # Замена плейсхолдеров
                 svg_content = template.replace('{Фамилия}', employee.last_name)
@@ -70,7 +118,7 @@ class EmployeeAdmin(ImportExportModelAdmin):
                 svg_content = svg_content.replace('{Отчество}', employee.middle_name)
                 svg_content = svg_content.replace('{Подразделение}', str(employee.department))
                 svg_content = svg_content.replace('{Должность}', str(employee.position))
-                svg_content = svg_content.replace('{Фото}', f'data:image/jpeg;base64,{photo_base64}' if photo_base64 else '')
+                svg_content = svg_content.replace('{Фото}', f'data:image/jpeg;base64,{photo_base64}')
                 
                 # Создание директории если не существует
                 pass_dir = os.path.join(settings.MEDIA_ROOT, 'pass_result')
@@ -100,6 +148,8 @@ class EmployeeAdmin(ImportExportModelAdmin):
         
         if success_count > 0:
             self.message_user(request, f'Успешно создано пропусков: {success_count}')
+        if skipped_count > 0:
+            self.message_user(request, f'Пропущено сотрудников без фото: {skipped_count}', level=messages.WARNING)
         if error_count > 0:
             self.message_user(request, f'Ошибок при создании пропусков: {error_count}', level=messages.ERROR)
     
