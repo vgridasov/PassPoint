@@ -15,6 +15,7 @@ class EmployeeResource(resources.ModelResource):
     department = Field(attribute='department', column_name='department')
     position = Field(attribute='position', column_name='position')
     lost_pass = Field(attribute='lost_pass', column_name='lost_pass')
+    pass_status_display = Field(attribute='get_pass_status_display', column_name='Статус пропуска')
 
     # Сопоставление русских заголовков с полями модели
     RUSSIAN_FIELD_MAP = {
@@ -23,20 +24,38 @@ class EmployeeResource(resources.ModelResource):
         'Отчество': 'middle_name',
         'Подразделение': 'department',
         'Должность': 'position',
-        'Пропуск': 'has_pass',
+        'Статус пропуска': 'pass_status',
         'Уволен': 'is_fired',
     }
 
     class Meta:
         model = Employee
-        fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass')
-        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'has_pass', 'lost_pass')
+        fields = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'pass_status', 'lost_pass')
+        export_order = ('id', 'last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'pass_svg', 'is_fired', 'pass_status', 'lost_pass')
 
     def import_row(self, row, instance_loader, **kwargs):
         # Сопоставляем русские заголовки с полями модели
         for ru, en in self.RUSSIAN_FIELD_MAP.items():
             if ru in row and en not in row:
                 row[en] = row[ru]
+        
+        # Преобразуем значения статуса пропуска из русского в английский
+        if 'pass_status' in row:
+            status_map = {
+                'Нет': 'none',
+                'Готов': 'ready',
+                'Выдан': 'issued',
+                'Изъят': 'withdrawn',
+                'Изъят/Аннулирован': 'withdrawn',
+            }
+            ru_status = row['pass_status'].strip()
+            if ru_status in status_map:
+                row['pass_status'] = status_map[ru_status]
+            else:
+                # Если значение не распознано, устанавливаем 'none'
+                row['pass_status'] = 'none'
+                logger.warning(f"Неизвестное значение статуса пропуска: {ru_status}, установлено 'none'")
+        
         return super().import_row(row, instance_loader, **kwargs)
 
     def before_import_row(self, row, **kwargs):
@@ -44,7 +63,7 @@ class EmployeeResource(resources.ModelResource):
         logger.info(f"Импорт сотрудника: {row}")
         
         # Очищаем строковые поля от лишних пробелов
-        for field in ['last_name', 'first_name', 'middle_name', 'department', 'position']:
+        for field in ['last_name', 'first_name', 'middle_name', 'department', 'position', 'pass_status']:
             if field in row and row[field]:
                 row[field] = row[field].strip()
         
@@ -71,7 +90,6 @@ class EmployeeResource(resources.ModelResource):
                     logger.info(f"Создано новое подразделение: {dep.name}")
                 else:
                     logger.info(f"Найдено существующее подразделение: {dep.name}")
-            # Устанавливаем значение в row
             row['department'] = dep
         except Department.DoesNotExist:
             logger.error(f"Подразделение не найдено: {dep_val}")
@@ -98,7 +116,6 @@ class EmployeeResource(resources.ModelResource):
                     logger.info(f"Создана новая должность: {pos.name}")
                 else:
                     logger.info(f"Найдена существующая должность: {pos.name}")
-            # Устанавливаем значение в row
             row['position'] = pos
         except Position.DoesNotExist:
             logger.error(f"Должность не найдена: {pos_val}")
@@ -119,11 +136,10 @@ class EmployeeResource(resources.ModelResource):
             
             if existing_employee:
                 logger.info(f"Найден существующий сотрудник: {existing_employee}")
-                # Устанавливаем ID существующего сотрудника для обновления
                 row['id'] = existing_employee.id
                 # Обновляем только непустые поля
-                for field in ['photo', 'pass_svg', 'is_fired', 'has_pass']:
-                    if field in row and row[field] and row[field].strip():
+                for field in ['photo', 'pass_svg', 'is_fired', 'pass_status', 'lost_pass']:
+                    if field in row and row[field] and str(row[field]).strip():
                         setattr(existing_employee, field, row[field].strip())
                 existing_employee.save()
                 

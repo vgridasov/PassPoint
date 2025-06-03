@@ -69,10 +69,16 @@
                                 {% endif %}
                                 {% if employee.lost_pass %}
                                     <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
-                                {% elif employee.has_pass %}
-                                    <span class="badge bg-success" title="Выдан пропуск">Выдан пропуск</span>
                                 {% else %}
-                                    <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
+                                    {% if employee.pass_status == 'none' %}
+                                        <span class="badge bg-warning" title="Нет пропуска">Нет</span>
+                                    {% elif employee.pass_status == 'ready' %}
+                                        <span class="badge bg-info" title="Пропуск готов">Готов</span>
+                                    {% elif employee.pass_status == 'issued' %}
+                                        <span class="badge bg-success" title="Пропуск выдан">Выдан</span>
+                                    {% elif employee.pass_status == 'withdrawn' %}
+                                        <span class="badge bg-danger" title="Пропуск изъят">Изъят</span>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
@@ -110,8 +116,16 @@
                                 {% endif %}
                                 {% if employee.lost_pass %}
                                     <span class="badge bg-danger" title="Утерян пропуск">Утерян пропуск</span>
-                                {% elif not employee.has_pass %}
-                                    <span class="badge bg-warning" title="Нет пропуска">Нет пропуска</span>
+                                {% else %}
+                                    {% if employee.pass_status == 'none' %}
+                                        <span class="badge bg-warning" title="Нет пропуска">Нет</span>
+                                    {% elif employee.pass_status == 'ready' %}
+                                        <span class="badge bg-info" title="Пропуск готов">Готов</span>
+                                    {% elif employee.pass_status == 'issued' %}
+                                        <span class="badge bg-success" title="Пропуск выдан">Выдан</span>
+                                    {% elif employee.pass_status == 'withdrawn' %}
+                                        <span class="badge bg-danger" title="Пропуск изъят">Изъят</span>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </td>

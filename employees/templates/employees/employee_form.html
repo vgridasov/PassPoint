@@ -132,12 +132,8 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <div class="form-check">
-                        {{ form.has_pass }}
-                        <label class="form-check-label" for="{{ form.has_pass.id_for_label }}">
-                            Выдан пропуск
-                        </label>
-                    </div>
+                    <label for="{{ form.pass_status.id_for_label }}" class="form-label">Статус пропуска</label>
+                    {{ form.pass_status }}
                 </div>
                 <div class="mb-3">
                     <div class="form-check">

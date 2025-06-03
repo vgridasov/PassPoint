@@ -4,7 +4,7 @@ from .models import Employee, Department, Position
 class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
-        fields = ['last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'is_fired', 'has_pass', 'lost_pass']
+        fields = ['last_name', 'first_name', 'middle_name', 'department', 'position', 'photo', 'is_fired', 'pass_status', 'lost_pass']
         widgets = {
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -13,7 +13,7 @@ class EmployeeForm(forms.ModelForm):
             'position': forms.Select(attrs={'class': 'form-control'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'is_fired': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_pass': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'pass_status': forms.Select(attrs={'class': 'form-control'}),
             'lost_pass': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

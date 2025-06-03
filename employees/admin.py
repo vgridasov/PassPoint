@@ -16,24 +16,30 @@ from django.contrib.admin import SimpleListFilter
 
 logger = logging.getLogger(__name__)
 
-class NoPassFilter(SimpleListFilter):
-    """Фильтр для сотрудников без пропуска"""
+class PassStatusFilter(SimpleListFilter):
+    """Фильтр для статуса пропуска"""
     title = 'Статус пропуска'
-    parameter_name = 'pass_status'
+    parameter_name = 'pass_status_filter'
 
     def lookups(self, request, model_admin):
         return (
-            ('no_pass', 'Нет пропуска'),
-            ('has_pass', 'Есть пропуск'),
-            ('lost_pass', 'Утерян пропуск'),
+            (Employee.PASS_STATUS_NONE, 'Нет пропуска'),
+            (Employee.PASS_STATUS_READY, 'Пропуск готов'),
+            (Employee.PASS_STATUS_ISSUED, 'Пропуск выдан'),
+            (Employee.PASS_STATUS_WITHDRAWN, 'Пропуск изъят/аннулирован'),
+            ('is_lost', 'Отметка об утере'),
         )
 
     def queryset(self, request, queryset):
-        if self.value() == 'no_pass':
-            return queryset.filter(has_pass=False, lost_pass=False)
-        if self.value() == 'has_pass':
-            return queryset.filter(has_pass=True, lost_pass=False)
-        if self.value() == 'lost_pass':
+        if self.value() == Employee.PASS_STATUS_NONE:
+            return queryset.filter(pass_status=Employee.PASS_STATUS_NONE)
+        if self.value() == Employee.PASS_STATUS_READY:
+            return queryset.filter(pass_status=Employee.PASS_STATUS_READY)
+        if self.value() == Employee.PASS_STATUS_ISSUED:
+            return queryset.filter(pass_status=Employee.PASS_STATUS_ISSUED)
+        if self.value() == Employee.PASS_STATUS_WITHDRAWN:
+            return queryset.filter(pass_status=Employee.PASS_STATUS_WITHDRAWN)
+        if self.value() == 'is_lost':
             return queryset.filter(lost_pass=True)
         return queryset
 
@@ -58,34 +64,27 @@ class NoPhotoFilter(SimpleListFilter):
 @admin.register(Employee)
 class EmployeeAdmin(ImportExportModelAdmin):
     resource_class = EmployeeResource
-    list_display = ('last_name', 'first_name', 'middle_name', 'department', 'position', 'is_fired', 'has_pass', 'lost_pass')
-    list_filter = ('department', 'position', 'is_fired', NoPassFilter, NoPhotoFilter)
+    list_display = ('last_name', 'first_name', 'middle_name', 'department', 'position', 'get_is_fired_display', 'pass_status', 'get_lost_pass_display')
+    list_filter = ('department', 'position', 'is_fired', PassStatusFilter, NoPhotoFilter)
     search_fields = ('last_name', 'first_name', 'middle_name')
     change_list_template = 'admin/import_export/change_list_import_export.html'
     actions = ['create_passes']
 
-    def is_fired(self, obj):
+    @admin.display(boolean=True, description='Уволен')
+    def get_is_fired_display(self, obj):
         return obj.is_fired
-    is_fired.boolean = True
-    is_fired.short_description = 'Уволен'
 
-    def has_pass(self, obj):
-        return obj.has_pass
-    has_pass.boolean = True
-    has_pass.short_description = 'Выдан пропуск'
-
-    def lost_pass(self, obj):
+    @admin.display(boolean=True, description='Утерян пропуск')
+    def get_lost_pass_display(self, obj):
         return obj.lost_pass
-    lost_pass.boolean = True
-    lost_pass.short_description = 'Утерян пропуск'
 
     def create_passes(self, request, queryset):
         """Массовое создание пропусков для выбранных сотрудников"""
         success_count = 0
         error_count = 0
-        skipped_count = 0
+        skipped_photo_count = 0
+        skipped_status_count = 0
         
-        # Чтение шаблона пропуска
         template_path = os.path.join(settings.MEDIA_ROOT, 'pass-template.svg')
         try:
             with open(template_path, 'r', encoding='utf-8') as f:
@@ -95,48 +94,55 @@ class EmployeeAdmin(ImportExportModelAdmin):
             return
 
         for employee in queryset:
+            if employee.pass_status not in [Employee.PASS_STATUS_NONE, Employee.PASS_STATUS_WITHDRAWN]:
+                logger.info(f"Создание пропуска для {employee} пропущено: текущий статус '{employee.get_pass_status_display()}' не позволяет создать новый.")
+                skipped_status_count += 1
+                continue
+
             try:
-                # Проверка наличия фото
                 if not employee.photo:
                     logger.warning(f"Пропуск пропуска для {employee}: отсутствует фото")
-                    skipped_count += 1
+                    skipped_photo_count += 1
                     continue
 
-                # Подготовка фото в base64
                 photo_base64 = ''
                 try:
-                    with open(employee.photo.path, 'rb') as f:
-                        photo_base64 = base64.b64encode(f.read()).decode('utf-8')
+                    if hasattr(employee.photo, 'path') and employee.photo.path:
+                        with open(employee.photo.path, 'rb') as f:
+                            photo_base64 = base64.b64encode(f.read()).decode('utf-8')
+                    elif employee.photo:
+                        photo_content = employee.photo.read()
+                        photo_base64 = base64.b64encode(photo_content).decode('utf-8')
+                        employee.photo.seek(0)
+                    else:
+                        logger.error(f"Фото для {employee} не имеет пути и не может быть прочитано.")
+                        skipped_photo_count += 1
+                        continue
                 except Exception as e:
                     logger.error(f"Ошибка при чтении фото для {employee}: {str(e)}")
-                    skipped_count += 1
+                    skipped_photo_count += 1
                     continue
                 
-                # Замена плейсхолдеров
                 svg_content = template.replace('{Фамилия}', employee.last_name)
                 svg_content = svg_content.replace('{Имя}', employee.first_name)
-                svg_content = svg_content.replace('{Отчество}', employee.middle_name)
+                svg_content = svg_content.replace('{Отчество}', employee.middle_name or '')
                 svg_content = svg_content.replace('{Подразделение}', str(employee.department))
                 svg_content = svg_content.replace('{Должность}', str(employee.position))
                 svg_content = svg_content.replace('{Фото}', f'data:image/jpeg;base64,{photo_base64}')
                 
-                # Создание директории если не существует
                 pass_dir = os.path.join(settings.MEDIA_ROOT, 'pass_result')
                 os.makedirs(pass_dir, exist_ok=True)
                 
-                # Формирование имени файла
-                filename = f'pass_{employee.id}_{employee.last_name}_{employee.first_name}_{employee.middle_name}.svg'
+                filename = f'pass_{employee.id}_{employee.last_name}_{employee.first_name}_{employee.middle_name or ""}.svg'
+                filename = "".join(c if c.isalnum() or c in ['.', '_'] else '_' for c in filename)
                 filepath = os.path.join(pass_dir, filename)
                 
-                # Сохранение файла
                 with open(filepath, 'w', encoding='utf-8') as f:
                     f.write(svg_content)
                 
-                # Обновление ссылки в модели
                 relative_path = os.path.join('pass_result', filename)
                 employee.pass_svg = relative_path
-                employee.has_pass = True
-                employee.lost_pass = False
+                employee.pass_status = Employee.PASS_STATUS_READY
                 employee.save()
                 
                 success_count += 1
@@ -148,8 +154,10 @@ class EmployeeAdmin(ImportExportModelAdmin):
         
         if success_count > 0:
             self.message_user(request, f'Успешно создано пропусков: {success_count}')
-        if skipped_count > 0:
-            self.message_user(request, f'Пропущено сотрудников без фото: {skipped_count}', level=messages.WARNING)
+        if skipped_photo_count > 0:
+            self.message_user(request, f'Пропущено сотрудников (без фото): {skipped_photo_count}', level=messages.WARNING)
+        if skipped_status_count > 0:
+            self.message_user(request, f'Пропущено сотрудников (неверный статус пропуска): {skipped_status_count}', level=messages.WARNING)
         if error_count > 0:
             self.message_user(request, f'Ошибок при создании пропусков: {error_count}', level=messages.ERROR)
     

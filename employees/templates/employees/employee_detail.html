@@ -47,10 +47,16 @@
                     <dd class="col-sm-9">
                         {% if employee.lost_pass %}
                             <span class="badge bg-danger">Утерян</span>
-                        {% elif employee.has_pass %}
-                            <span class="badge bg-success">Выдан</span>
                         {% else %}
-                            <span class="badge bg-warning">Не выдан</span>
+                            {% if employee.pass_status == 'none' %}
+                                <span class="badge bg-warning">Нет</span>
+                            {% elif employee.pass_status == 'ready' %}
+                                <span class="badge bg-info">Готов</span>
+                            {% elif employee.pass_status == 'issued' %}
+                                <span class="badge bg-success">Выдан</span>
+                            {% elif employee.pass_status == 'withdrawn' %}
+                                <span class="badge bg-danger">Изъят/Аннулирован</span>
+                            {% endif %}
                         {% endif %}
                     </dd>
                 </dl>

@@ -129,37 +129,22 @@ def employee_edit(request, pk):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
-            # Обработка кадрированного фото из файла
-            file_photo_cropped = request.POST.get('file_photo_cropped')
-            if file_photo_cropped:
-                try:
-                    format, imgstr = file_photo_cropped.split(';base64,')
-                    ext = format.split('/')[-1]
-                    filename = f"{uuid.uuid4()}.{ext}"
-                    data = ContentFile(base64.b64decode(imgstr))
-                    employee.photo.save(filename, data, save=True)
-                except Exception as e:
-                    logger.error(f"Ошибка при сохранении кадрированного фото из файла: {str(e)}")
-                    messages.error(request, 'Ошибка при сохранении фото')
-                    return render(request, 'employees/employee_form.html', {
-                        'form': form, 
-                        'title': 'Редактировать сотрудника',
-                        'view_mode': view_mode,
-                        'page': page,
-                        'employee': employee
-                    })
+            # Обработка фото
+            if request.FILES.get('photo'):
+                # Если загружен новый файл фото
+                employee.photo = request.FILES['photo']
             else:
-                # Обработка фото с веб-камеры
-                webcam_photo = request.POST.get('webcam_photo')
-                if webcam_photo and not request.FILES.get('photo'):
+                # Обработка кадрированного фото из файла
+                file_photo_cropped = request.POST.get('file_photo_cropped')
+                if file_photo_cropped:
                     try:
-                        format, imgstr = webcam_photo.split(';base64,')
+                        format, imgstr = file_photo_cropped.split(';base64,')
                         ext = format.split('/')[-1]
                         filename = f"{uuid.uuid4()}.{ext}"
                         data = ContentFile(base64.b64decode(imgstr))
-                        employee.photo.save(filename, data, save=True)
+                        employee.photo.save(filename, data, save=False)
                     except Exception as e:
-                        logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                        logger.error(f"Ошибка при сохранении кадрированного фото из файла: {str(e)}")
                         messages.error(request, 'Ошибка при сохранении фото')
                         return render(request, 'employees/employee_form.html', {
                             'form': form, 
@@ -168,6 +153,26 @@ def employee_edit(request, pk):
                             'page': page,
                             'employee': employee
                         })
+                else:
+                    # Обработка фото с веб-камеры
+                    webcam_photo = request.POST.get('webcam_photo')
+                    if webcam_photo:
+                        try:
+                            format, imgstr = webcam_photo.split(';base64,')
+                            ext = format.split('/')[-1]
+                            filename = f"{uuid.uuid4()}.{ext}"
+                            data = ContentFile(base64.b64decode(imgstr))
+                            employee.photo.save(filename, data, save=False)
+                        except Exception as e:
+                            logger.error(f"Ошибка при сохранении фото с веб-камеры: {str(e)}")
+                            messages.error(request, 'Ошибка при сохранении фото')
+                            return render(request, 'employees/employee_form.html', {
+                                'form': form, 
+                                'title': 'Редактировать сотрудника',
+                                'view_mode': view_mode,
+                                'page': page,
+                                'employee': employee
+                            })
 
             form.save()
             messages.success(request, 'Данные сотрудника обновлены')
@@ -372,20 +377,26 @@ def create_pass(request, pk):
         filename = f'pass_{employee.id}_{employee.last_name}_{employee.first_name}_{employee.middle_name}.svg'
         filepath = os.path.join(pass_dir, filename)
         
-        # Сохранение файла
+        # Сначала меняем статус пропуска на 'Готов'
+        employee.pass_status = Employee.PASS_STATUS_READY
+
+        # Сохраняем SVG-файл
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(svg_content)
-        
-        # Обновление ссылки в модели
-        relative_path = os.path.join('pass_result', filename)
-        employee.pass_svg = relative_path
-        employee.save()
-        
+        # После выхода из блока with файл закрыт
+
+        # Теперь открываем для чтения и сохраняем в pass_svg
+        with open(filepath, 'rb') as f:
+            employee.pass_svg.save(filename, ContentFile(f.read()))
+
+        # Обновляем объект из базы, чтобы поле pass_svg было актуальным
+        employee.refresh_from_db()
+
         logger.info(f"Пропуск успешно создан: {filepath}")
         return JsonResponse({
             'success': True,
             'message': 'Пропуск успешно создан',
-            'pass_url': employee.pass_svg.url
+            'pass_url': employee.pass_svg.url if employee.pass_svg else ''
         })
         
     except Employee.DoesNotExist:
@@ -457,7 +468,9 @@ def import_pass_template(request):
 def employees_without_pass(request):
     """Список сотрудников без пропуска"""
     employees = Employee.objects.filter(
-        Q(pass_svg__isnull=True) | Q(lost_pass=True) | Q(has_pass=False)
+        Q(pass_svg__isnull=True) | 
+        Q(lost_pass=True) | 
+        Q(pass_status__in=['none', 'withdrawn'])
     ).order_by('last_name', 'first_name')
     search_query = request.GET.get('search', '')
     if search_query:
