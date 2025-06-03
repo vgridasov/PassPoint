@@ -151,7 +151,11 @@
         </div>
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Сохранить</button>
-            <a href="{% url 'employee_detail' employee.pk %}?view={{ view_mode }}&page={{ page }}" class="btn btn-secondary">Отмена</a>
+            {% if form.instance.pk %}
+            <a href="{% url 'employee_detail' form.instance.pk %}?view={{ view_mode }}&page={{ page }}" class="btn btn-secondary">Отмена</a>
+            {% else %}
+            <a href="{% url 'employee_list' %}{% if request.GET.view %}?view={{ request.GET.view }}{% endif %}{% if request.GET.page %}{% if request.GET.view %}&{% else %}?{% endif %}page={{ request.GET.page }}{% endif %}" class="btn btn-secondary">Отмена</a>
+            {% endif %}
         </div>
     </form>
 </div>
