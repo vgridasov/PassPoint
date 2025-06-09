@@ -68,7 +68,7 @@ class EmployeeAdmin(ImportExportModelAdmin):
     list_filter = ('department', 'position', 'is_fired', PassStatusFilter, NoPhotoFilter)
     search_fields = ('last_name', 'first_name', 'middle_name')
     change_list_template = 'admin/import_export/change_list_import_export.html'
-    actions = ['create_passes']
+    actions = ['create_passes', 'mark_passes_as_issued']
 
     @admin.display(boolean=True, description='Уволен')
     def get_is_fired_display(self, obj):
@@ -162,6 +162,12 @@ class EmployeeAdmin(ImportExportModelAdmin):
             self.message_user(request, f'Ошибок при создании пропусков: {error_count}', level=messages.ERROR)
     
     create_passes.short_description = "Создать пропуски для выбранных сотрудников"
+
+    def mark_passes_as_issued(self, request, queryset):
+        """Установить статус пропуска 'Выдан' для выбранных сотрудников"""
+        updated = queryset.update(pass_status=Employee.PASS_STATUS_ISSUED)
+        self.message_user(request, f'Статус пропуска "Выдан" установлен для {updated} сотрудников')
+    mark_passes_as_issued.short_description = "Установить статус пропуска 'Выдан'"
 
     def import_action(self, request, *args, **kwargs):
         logger.info(f"Начало импорта сотрудников. Пользователь: {request.user}")
